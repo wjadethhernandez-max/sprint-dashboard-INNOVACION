@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Innovación y Ocupación</title>
+    <!-- Google Fonts: Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-surface-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-purple: #a855f7;
+            --accent-blue: #3b82f6;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --accent-amber: #f59e0b;
+            --border-color: #334155;
+            --font-outfit: 'Outfit', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-outfit);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            background-color: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-purple);
+            color: var(--text-primary);
+            border-color: var(--accent-purple);
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background-color: var(--bg-surface-hover);
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Panel de Controles / Filtros */
+        .controls-panel {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 1.5rem;
+            background-color: var(--bg-surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Dropdown multiselect personalizado */
+        .dropdown-multiselect {
+            position: relative;
+            width: 300px;
+            user-select: none;
+        }
+
+        .select-btn {
+            display: flex;
+            height: 45px;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-color);
+            transition: border-color 0.3s;
+        }
+
+        .select-btn:hover {
+            border-color: var(--accent-purple);
+        }
+
+        .select-btn .btn-text {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 230px;
+        }
+
+        .select-btn .arrow-dwn {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            transition: 0.3s;
+        }
+
+        .dropdown-multiselect.open .arrow-dwn {
+            transform: rotate(-180deg);
+        }
+
+        .list-items {
+            position: absolute;
+            top: 50px;
+            width: 100%;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+            max-height: 285px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .dropdown-multiselect.open .list-items {
+            display: block;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            list-style: none;
+            height: 38px;
+            cursor: pointer;
+            padding: 0 12px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .item:hover {
+            background-color: var(--bg-surface-hover);
+        }
+
+        .item .item-text {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: var(--text-primary);
+            margin-left: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }
+
+        .item input[type="checkbox"] {
+            accent-color: var(--accent-purple);
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Campos de fecha */
+        .date-input {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.65rem 1rem;
+            border-radius: 8px;
+            font-family: var(--font-outfit);
+            font-size: 0.95rem;
+            outline: none;
+            height: 45px;
+            width: 180px;
+            transition: border-color 0.3s;
+        }
+
+        .date-input:focus {
+            border-color: var(--accent-purple);
+        }
+
+        .reset-btn {
+            background-color: transparent;
+            color: var(--accent-rose);
+            border: 1px solid var(--accent-rose);
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
+            font-family: var(--font-outfit);
+            font-weight: 600;
+            cursor: pointer;
+            height: 45px;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background-color: rgba(244, 63, 94, 0.1);
+        }
+
+        /* Grid de KPIs */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .kpi-card .title {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-card .subtext {
+            font-size: 0.825rem;
+            color: var(--text-secondary);
+        }
+
+        .kpi-card.highlight-purple { border-left: 4px solid var(--accent-purple); }
+        .kpi-card.highlight-blue { border-left: 4px solid var(--accent-blue); }
+        .kpi-card.highlight-emerald { border-left: 4px solid var(--accent-emerald); }
+        .kpi-card.highlight-amber { border-left: 4px solid var(--accent-amber); }
+
+        .cdn-warning {
+            display: none;
+            background-color: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--accent-amber);
+            color: #fbbf24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            border-radius: 12px;
+            min-height: 460px;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            height: 250px;
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .table-section {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .table-header h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .search-bar {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-family: var(--font-outfit);
+            outline: none;
+            width: 300px;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar:focus {
+            border-color: var(--accent-purple);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--bg-surface);
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            text-transform: uppercase;
+        }
+
+        .badge-realizado, .badge-finalizado, .badge-completed {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--accent-emerald);
+        }
+
+        .badge-en-curso, .badge-curso {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .badge-backlog {
+            background-color: rgba(148, 163, 184, 0.15);
+            color: var(--text-secondary);
+        }
+
+        .badge-pruebas {
+            background-color: rgba(168, 85, 247, 0.15);
+            color: var(--accent-purple);
+        }
+        
+        .badge-to-do {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--accent-amber);
+        }
+        
+        .badge-bloqueado {
+            background-color: rgba(244, 63, 94, 0.15);
+            color: var(--accent-rose);
+        }
+        
+        .badge-reuniones {
+            background-color: rgba(6, 182, 212, 0.15);
+            color: #06b6d4;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>Dashboard de Innovación y Ocupación</h1>
+            <p style="color: var(--text-secondary); margin-top: 0.25rem;">Visualización interactiva de rendimiento del Sprint (2026)</p>
+        </div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('colaboradores')">Colaboradores</button>
+            <button class="tab-btn" onclick="switchTab('proyectos')">Proyectos</button>
+            <button class="tab-btn" onclick="switchTab('alertas')">Historial y Alertas</button>
+        </div>
+    </header>
+
+    <div id="cdn-alert" class="cdn-warning">
+        ⚠️ <strong>Aviso:</strong> No se pudo conectar con el servidor de gráficos (Chart.js). El Dashboard se mostrará en modo simplificado sin gráficos visuales, pero todos los datos de las tablas, KPIs y filtros siguen estando disponibles.
+    </div>
+
+    <!-- PESTAÑA COLABORADORES -->
+    <div id="tab-colaboradores" class="tab-content active">
+        
+        <div class="controls-panel">
+            <div class="control-group">
+                <label>Seleccionar Colaborador(es):</label>
+                <div class="dropdown-multiselect" id="colab-dropdown-container">
+                    <div class="select-btn" onclick="toggleColabDropdown(event)">
+                        <span class="btn-text" id="selected-colabs-text">Seleccionar Colaborador(es)</span>
+                        <span class="arrow-dwn">▼</span>
+                    </div>
+                    <ul class="list-items" id="colaboradores-list">
+                        <!-- Dinámico con checkboxes -->
+                    </ul>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Seleccionar Sprint(s):</label>
+                <div class="dropdown-multiselect" id="sprint-dropdown-container">
+                    <div class="select-btn" onclick="toggleSprintDropdown(event)">
+                        <span class="btn-text" id="selected-sprints-text">Todos los Sprints</span>
+                        <span class="arrow-dwn">▼</span>
+                    </div>
+                    <ul class="list-items" id="sprints-list">
+                        <!-- Dinámico con checkboxes -->
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="filter-start-date">Fecha Inicio:</label>
+                <input type="date" id="filter-start-date" class="date-input" onchange="updateDashboard()">
+            </div>
+            
+            <div class="control-group">
+                <label for="filter-end-date">Fecha Fin:</label>
+                <input type="date" id="filter-end-date" class="date-input" onchange="updateDashboard()">
+            </div>
+            
+            <button class="reset-btn" onclick="resetFilters()">Limpiar Filtros</button>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card highlight-purple">
+                <div>
+                    <div class="title">Total Horas Dedicadas</div>
+                    <div class="value" id="kpi-total-hours">0</div>
+                </div>
+                <div class="subtext">Horas acumuladas en tareas realizadas/finalizadas en el rango</div>
+            </div>
+            <div class="kpi-card highlight-blue">
+                <div>
+                    <div class="title">Ocupación Promedio</div>
+                    <div class="value" id="kpi-avg-occupancy">0%</div>
+                </div>
+                <div class="subtext">Frente a la capacidad de los seleccionados en el rango</div>
+            </div>
+            <div class="kpi-card highlight-emerald">
+                <div>
+                    <div class="title">Tareas Asignadas</div>
+                    <div class="value" id="kpi-total-tasks">0</div>
+                </div>
+                <div class="subtext">Total de actividades únicas en el rango</div>
+            </div>
+            <div class="kpi-card highlight-amber">
+                <div>
+                    <div class="title">Tareas Cerradas</div>
+                    <div class="value" id="kpi-closed-tasks">0</div>
+                </div>
+                <div class="subtext">Estado Realizado, Finalizado y Completed</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Capacidad Teórica vs. Horas Dedicadas Mensuales</h3>
+                <div id="wrapper-occupancy" class="chart-wrapper">
+                    <canvas id="chart-occupancy"></canvas>
+                </div>
+                <div id="occupancy-stats-table" style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); width: 100%;">
+                    <!-- Tabla de estadísticas dinámica -->
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Capacidad vs. Horas Reales por Colaborador</h3>
+                <div id="wrapper-people" class="chart-wrapper">
+                    <canvas id="chart-people"></canvas>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); width: 100%;">
+                    Comparación en base a las tareas finalizadas en el período
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Horas por Proyecto</h3>
+                <div id="wrapper-projects" class="chart-wrapper">
+                    <canvas id="chart-projects-pie"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Distribución de Tareas por Estado</h3>
+                <div id="wrapper-states" class="chart-wrapper">
+                    <canvas id="chart-states-pie"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <h3>Detalle de Tareas del Equipo</h3>
+                <input type="text" id="task-search" class="search-bar" placeholder="Buscar tarea..." onkeyup="filterTasks()">
+            </div>
+            <div class="table-container">
+                <table id="tasks-table">
+                    <thead>
+                        <tr>
+                            <th>Tarea</th>
+                            <th>Proyecto</th>
+                            <th>Sprint</th>
+                            <th>Estado</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th>Responsables</th>
+                            <th>Horas en Rango</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasks-tbody">
+                        <!-- Dinámico -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA PROYECTOS -->
+    <div id="tab-proyectos" class="tab-content">
+        <!-- KPIs Fila 1: Cantidades de Proyectos por Estado -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="kpi-card highlight-purple">
+                <div>
+                    <div class="title">Total de Proyectos</div>
+                    <div class="value" id="kpi-proj-total">0</div>
+                </div>
+                <div class="subtext">Proyectos del sprint</div>
+            </div>
+            <div class="kpi-card highlight-emerald">
+                <div>
+                    <div class="title">Finalizados/Realizados</div>
+                    <div class="value" id="kpi-proj-finished">0</div>
+                </div>
+                <div class="subtext">Terminados o cerrados</div>
+            </div>
+            <div class="kpi-card highlight-blue">
+                <div>
+                    <div class="title">En Curso</div>
+                    <div class="value" id="kpi-proj-inprogress">0</div>
+                </div>
+                <div class="subtext">Actividades en desarrollo</div>
+            </div>
+            <div class="kpi-card highlight-slate">
+                <div>
+                    <div class="title">Backlog / Sin Iniciar</div>
+                    <div class="value" id="kpi-proj-backlog">0</div>
+                </div>
+                <div class="subtext">En espera de inicio</div>
+            </div>
+            <div class="kpi-card highlight-rose">
+                <div>
+                    <div class="title">Bloqueados</div>
+                    <div class="value" id="kpi-proj-blocked">0</div>
+                </div>
+                <div class="subtext">Proyectos detenidos</div>
+            </div>
+        </div>
+
+        <!-- KPIs Fila 2: Métricas de Tareas -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 1rem;">
+            <div class="kpi-card highlight-amber">
+                <div>
+                    <div class="title">Total Horas Registradas</div>
+                    <div class="value" id="kpi-proj-hours">0</div>
+                </div>
+                <div class="subtext">Suma de todas las duraciones del sprint</div>
+            </div>
+            <div class="kpi-card highlight-blue">
+                <div>
+                    <div class="title">Tareas Totales</div>
+                    <div class="value" id="kpi-proj-tasks">0</div>
+                </div>
+                <div class="subtext">Tareas y subtareas registradas</div>
+            </div>
+            <div class="kpi-card highlight-rose">
+                <div>
+                    <div class="title">Tareas Sin Asignar</div>
+                    <div class="value" id="kpi-proj-unassigned">0</div>
+                </div>
+                <div class="subtext">Tareas que requieren responsable</div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <h3>Consolidado de Proyectos del Sprint</h3>
+                <input type="text" id="project-search" class="search-bar" placeholder="Buscar proyecto..." onkeyup="filterProjects()">
+            </div>
+            <div class="table-container">
+                <table id="projects-table">
+                    <thead>
+                        <tr>
+                            <th>Proyecto</th>
+                            <th>Sprint</th>
+                            <th>Estado Principal</th>
+                            <th>Horas Dedicadas</th>
+                            <th>Responsables Asignados</th>
+                            <th>Cant. Tareas</th>
+                            <th>Tareas Cerradas</th>
+                            <th>Tareas Sin Asignar</th>
+                            <th>En Curso</th>
+                            <th>En Pruebas</th>
+                            <th>Bloqueadas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projects-tbody">
+                        <!-- Dinámico -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA HISTORIAL Y ALERTAS -->
+    <div id="tab-alertas" class="tab-content">
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <div class="kpi-card highlight-rose">
+                <div>
+                    <div class="title">Alertas de Desviación Detectadas</div>
+                    <div class="value" id="kpi-alertas-total">0</div>
+                </div>
+                <div class="subtext">Tareas con fecha fin editada tras haber estado finalizadas/en curso/pruebas</div>
+            </div>
+            <div class="kpi-card highlight-purple">
+                <div>
+                    <div class="title">Cortes Históricos Comparados</div>
+                    <div class="value" id="kpi-alertas-cortes">0</div>
+                </div>
+                <div class="subtext">Archivos de corte analizados en el directorio</div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <h3>Registro de Cambios en Fechas de Fin de Tareas</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">Auditoría de desvíos detectados al comparar las versiones del CSV del sprint</p>
+            </div>
+            <div class="table-container">
+                <table id="alertas-table">
+                    <thead>
+                        <tr>
+                            <th>Tarea</th>
+                            <th>Proyecto</th>
+                            <th>Estado Anterior</th>
+                            <th>Estado Actual</th>
+                            <th>Fecha Fin Anterior</th>
+                            <th>Fecha Fin Nueva</th>
+                            <th>Corte Anterior</th>
+                            <th>Corte Actual</th>
+                            <th>Desviación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertas-tbody">
+                        <!-- Dinámico -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dataB64 = "eyJjYXBhY2l0eSI6IHsiMjAyNi0wMyI6IDE4NS41LCAiMjAyNi0wNCI6IDE3OS41LCAiMjAyNi0wNSI6IDE2Ni41LCAiMjAyNi0wNiI6IDE2Ni41LCAiMjAyNi0wNyI6IDE4Mi4wfSwgInBlb3BsZSI6IHsiQ1JJU1RJQU4gWEFWSUVSIE1PUkVOTyBQw4lSRVoiOiB7Im1vbnRobHlfaG91cnMiOiB7IjIwMjYtMDMiOiA4OC4wLCAiMjAyNi0wNCI6IDMxNS4wLCAiMjAyNi0wNSI6IDMyNy4wLCAiMjAyNi0wNiI6IDE0NS4wLCAiMjAyNi0wNyI6IDQ3LjV9LCAicHJvamVjdHMiOiB7IlBhcmFtZXRyaXphY2nDs24gQXVkaXRvcsOtYXMgTHV0ZWMiOiAwLjAsICJGaWx0cm8gQ29uc29saWRhZG8gQ2Vsc2lhICg3OTApIjogMjM5LjAsICJSZXBvcnRlcyBOQyBNYW50ZW5pbWllbnRvIjogMTc5LjUsICJBanVzdGUgMTMgVmlzdGFzIE1MVSBBaXJlIjogMTMyLjAsICJSZXBvcnRlIEluc3BlY2Npw7NuIEluc3QuIEVsw6ljdHJpY2FzIjogMTkuMCwgIkluZm9ybWUgVVVDQyBNYW50ZW5pbWllbnRvIjogMTkuMCwgIkFqdXN0ZSBCb3QgQ0UiOiAzNC41LCAiQXBsaWNhdGl2by9UYWJsZXJvIGRlIERCQSI6IDkuNSwgIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIjogNzIuNSwgIkdlbmVyYWNpw7NuIFByZXN1cHVlc3RvcyBQbGFub3MgKDc0NSkiOiAxNzkuNSwgIklOQ0lERU5DSUFTIjogMzguMH0sICJzdGF0ZXMiOiB7ImVuIGN1cnNvIjogMiwgInBydWViYXMiOiAyLCAiZmluYWxpemFkbyI6IDQ1LCAiYmFja2xvZyI6IDUsICJibG9xdWVhZG8iOiAxfSwgInRhc2tzIjogW3siVGFyZWEiOiAiQXV0b21hdGl6YWNpw7NuIGRlIE5vdGlmaWNhY2nDs24gTm8gQ29uZm9ybWlkYWRlcyBNYW50ZW5pbWllbnRvIHkgQ29udHJvbCBFbmVyZ8OtYSIsICJQcm95ZWN0byI6ICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiZW4gY3Vyc28iLCAiRmVjaGEgSW5pY2lvIjogIjkvMDYvMjAyNiIsICJGZWNoYSBGaW4iOiAiOS8wNy8yMDI2IiwgIkhvcmFzIjogMTg1LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJHZW5lcmFjacOzbiBkZSBwcmVzdXB1ZXN0b3MgYXV0b21hdGl6YWRvIGEgcGFydGlyIGRlIGxhIGxlY3R1cmEgZGUgcGxhbm9zICg3NDUpIiwgIlByb3llY3RvIjogIkdlbmVyYWNpw7NuIFByZXN1cHVlc3RvcyBQbGFub3MgKDc0NSkiLCAiRXN0YWRvIjogInBydWViYXMiLCAiRmVjaGEgSW5pY2lvIjogIjI0LzAzLzIwMjYiLCAiRmVjaGEgRmluIjogIjMwLzA2LzIwMjYiLCAiSG9yYXMiOiA1NjYuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlBhcmFtZXRyaXphY2nDs24gZGUgcHJveWVjdG8gQXVkaXRvcmlhcyBFbmVyZ8OpdGljYXMgTHV0ZWMiLCAiUHJveWVjdG8iOiAiUGFyYW1ldHJpemFjacOzbiBBdWRpdG9yw61hcyBMdXRlYyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJBZ3JlZ2FyIEZpbHRybyBkZSBCdXNxdWVkYSBSZXBvcnRlIENvbnNvbGlkYWRvIENlbHNpYSAoNzkwKSIsICJQcm95ZWN0byI6ICJGaWx0cm8gQ29uc29saWRhZG8gQ2Vsc2lhICg3OTApIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxLzA1LzIwMjYiLCAiRmVjaGEgRmluIjogIjExLzA2LzIwMjYiLCAiSG9yYXMiOiAyMzkuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIk1vZGlmaWNhciBSZXBvcnRlcyBObyBjb25mb3JtaWRhZGVzIE1hbnRlbmltaWVudG8gQWN0aXZpZGFkZXMvTWF0ZXJpYWxlcyIsICJQcm95ZWN0byI6ICJSZXBvcnRlcyBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIyOC8wNC8yMDI2IiwgIkZlY2hhIEZpbiI6ICIyNy8wNS8yMDI2IiwgIkhvcmFzIjogMTc5LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJBanVzdGUgZGUgMTMgVmlzdGEgUHJveWVjdG8gTUxVIEFpcmUiLCAiUHJveWVjdG8iOiAiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiNi8wNC8yMDI2IiwgIkZlY2hhIEZpbiI6ICIyNC8wNC8yMDI2IiwgIkhvcmFzIjogMTMyLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJEZXNhcnJvbGxvIFJlcG9ydGUgSW5zcGVjY2nDs24gZGUgSW5zdGFsYWNpb25lcyBlbGVjdHJpY2FzIiwgIlByb3llY3RvIjogIlJlcG9ydGUgSW5zcGVjY2nDs24gSW5zdC4gRWzDqWN0cmljYXMiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjI3LzA0LzIwMjYiLCAiRmVjaGEgRmluIjogIjI4LzA0LzIwMjYiLCAiSG9yYXMiOiAxOS4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQ3JlYWNpb24gZGUgSW5mb3JtZSBVVUNDIE1hbnRlbmltaWVudG8iLCAiUHJveWVjdG8iOiAiSW5mb3JtZSBVVUNDIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjMwLzA0LzIwMjYiLCAiRmVjaGEgRmluIjogIjQvMDUvMjAyNiIsICJIb3JhcyI6IDE5LjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJhanVzdGUgZGVsIGJvdCBDRSAoY29udHJvbCBkZSBlbmVyZ2lhKSIsICJQcm95ZWN0byI6ICJBanVzdGUgQm90IENFIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxOC8wMy8yMDI2IiwgIkZlY2hhIEZpbiI6ICIyNC8wMy8yMDI2IiwgIkhvcmFzIjogMzQuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkFjdHVhbGl6YWNpb24gaWQgMjMzMiAyMzUyIHkgcmVwb3J0ZXMuIGNhc28oMTU0NjkpIiwgIlByb3llY3RvIjogIkFjdHVhbGl6YWNpw7NuIDIzMzIvMjM1MiB5IFJlcG9ydGVzIiwgIkVzdGFkbyI6ICJwcnVlYmFzIiwgIkZlY2hhIEluaWNpbyI6ICI5LzA2LzIwMjYiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkxldmFudGFtaWVudG8gZGUgcmVxdWVyaW1pZW50b3MtUmV1bmlvbjQiLCAiUHJveWVjdG8iOiAiQXBsaWNhdGl2by9UYWJsZXJvIGRlIERCQSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiNy8wNy8yMDI2IiwgIkZlY2hhIEZpbiI6ICI3LzA3LzIwMjYiLCAiSG9yYXMiOiA5LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJGYXNlIDMgKFNlbWFuYSAzKSDigJQgVmVyaWZpY2FjacOzbiBkZSBjb3JyZW8geSBjcnVjZSIsICJQcm95ZWN0byI6ICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiZW4gY3Vyc28iLCAiRmVjaGEgSW5pY2lvIjogIjE5LzA2LzIwMjYiLCAiRmVjaGEgRmluIjogIjI2LzA2LzIwMjYiLCAiSG9yYXMiOiA1MC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRmFzZSAyIChTZW1hbmEgMikg4oCUIFNpbmNyb25pemFjacOzbiBmaWx0cmFkYSB5IG1vdG9yIGRlIHRpZW1wb3MiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjEyLzA2LzIwMjYiLCAiRmVjaGEgRmluIjogIjE3LzA2LzIwMjYiLCAiSG9yYXMiOiAyNS4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRmFzZSAxIChTZW1hbmEgMSkg4oCUIENpbWllbnRvcyBkYXRvcyBzdXBlcnZpc29yZXMvem9uYXMgeSBjb25leGnDs24gYSBGb3JtYXAiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjQvMDYvMjAyNiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRmFzZSA0IChTZW1hbmEgNCkg4oCUIFJlcG9ydGVzIHBhbnRhbGxhIHkgY2llcnJlIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMTogUmV2aXNhciB5IGNlcnJhciBsbyB5YSBjb25zdHJ1aWRvIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICI0LzA2LzIwMjYiLCAiRmVjaGEgRmluIjogIjQvMDYvMjAyNiIsICJIb3JhcyI6IDkuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMjogVGFibGEgZGUgU3VwZXJ2aXNvcmVzICsgYXNpZ25hY2nDs24gZGUgem9uYShzKSIsICJQcm95ZWN0byI6ICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiOS8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICI5LzA2LzIwMjYiLCAiSG9yYXMiOiA5LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJEw61hIDM6IEVuZHBvaW50cyBkZSBhZG1pbmlzdHJhY2nDs24gZGUgc3VwZXJ2aXNvcmVzIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxMC8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxMC8wNi8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRMOtYSA0OiBDb25leGnDs24gZGUgc29sbyBsZWN0dXJhIGEgU1FMIFNlcnZlciAoRm9ybWFwKSIsICJQcm95ZWN0byI6ICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMTEvMDYvMjAyNiIsICJGZWNoYSBGaW4iOiAiMTEvMDYvMjAyNiIsICJIb3JhcyI6IDkuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgNTogQ29uc3VsdGEgYmFzZSBhIEZvcm1hcCB0cmFlciBhY3RpdmlkYWRlcyBjb24gY2FsaWZpY2FjacOzbiA9IE5DIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxNi8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxNi8wNi8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUHJ1ZWJhcyBSZW5kaW1pZW50byBHZW5lcmFjacOzbiBkZSBQcmVzdXB1ZXN0byIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJibG9xdWVhZG8iLCAiRmVjaGEgSW5pY2lvIjogIjE3LzA0LzIwMjYiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZBU0UgREUgQU5BTElTSVMiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMjQvMDMvMjAyNiIsICJGZWNoYSBGaW4iOiAiMjYvMDMvMjAyNiIsICJIb3JhcyI6IDI4LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJGQVNFIDEgQVJRVUlURUNUVVJBIEJBU0UgREFUT1MiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMjcvMDMvMjAyNiIsICJGZWNoYSBGaW4iOiAiOC8wNC8yMDI2IiwgIkhvcmFzIjogNjMuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZBU0UgMiBQcm9jZXNhbWllbnRvIHkgdmFsaWRhY2nDs24gZGUgaW5zdW1vcyBkZWwgcGxhbm8iLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiOC8wNC8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxMy8wNC8yMDI2IiwgIkhvcmFzIjogMzQuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZBU0UgMyBJbXBsZW1lbnRhciBpbnRlcmZheiBkZSB2aXN1YWxpemFjacOzbiBkZSBwcmVzdXB1ZXN0b3MiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMTMvMDQvMjAyNiIsICJGZWNoYSBGaW4iOiAiMjAvMDQvMjAyNiIsICJIb3JhcyI6IDUzLjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDUkVBQ0lPTiBFU1RSVUNUVVJBIERFIEJBU0UgREUgREFUT1MiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDUkVBQ0lPTiBTUCBJTlNFUlQgREFUQSBFWFRSQUNUSU9OIiwgIlByb3llY3RvIjogIkdlbmVyYWNpw7NuIFByZXN1cHVlc3RvcyBQbGFub3MgKDc0NSkiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQ1JFQVIgU1AgQ0FSR0FSIE1BVEVSSUFMRVMiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDUkVBQ0lPTiBERSBTUCBJTlNFUlQgREFUQSBDQVRBTE9HTyBERSBNQVRFUklBTEVTIiwgIlByb3llY3RvIjogIkdlbmVyYWNpw7NuIFByZXN1cHVlc3RvcyBQbGFub3MgKDc0NSkiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQ1JFQVIgU1AgQ09OU1VMVEFSIERBVEEgRVhUUkFDVElPTiIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkNSRUFSIFNQUyBDUlVEIFVVQ0NTIiwgIlByb3llY3RvIjogIkdlbmVyYWNpw7NuIFByZXN1cHVlc3RvcyBQbGFub3MgKDc0NSkiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQ1JFQVIgU1BTIENSVUQgQ0FURUdPUklBUyAoTUFJTikiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJUcmlnZ2VyIEluc2Vyc2lvbiBQcmVzdXB1ZXN0byIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlZhbGlkYWNpw7NuIGRlIGRhdG9zIGZhbHRhbnRlcyIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkPDoWxjdWxvIGF1dG9tw6F0aWNvIGRlIGNvc3RvcyIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkNydWNlIGRlIG1hdGVyaWFsZXMgcG9yIGPDs2RpZ28gKFVVQ0MpIiwgIlByb3llY3RvIjogIkdlbmVyYWNpw7NuIFByZXN1cHVlc3RvcyBQbGFub3MgKDc0NSkiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQWdydXBhY2nDs24gcG9yIGVzdHJ1Y3R1cmEgKEFQT1lPKSIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkdlbmVyYWNpw7NuIGRlIHRvdGFsZXMiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDb250cm9sIGRlIGluY29uc2lzdGVuY2lhcyIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlZpc3RhIENhcmd1ZSBkZSBBcmNoaXZvIEF1dG9DQUQiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUHJlc3VwdWVzdG9zIFBsYW5vcyAoNzQ1KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJWaXN0YSBJbXByZXNpw7NuIFByZXN1cHVlc3RvcyIsICJQcm95ZWN0byI6ICJHZW5lcmFjacOzbiBQcmVzdXB1ZXN0b3MgUGxhbm9zICg3NDUpIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkluZm9ybWVUcmFuZm9ybWFkb3JNQXRhZSIsICJQcm95ZWN0byI6ICJBanVzdGUgMTMgVmlzdGFzIE1MVSBBaXJlIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkNyZWFjaW9uIGRlIFZpc3RhIEluZm9ybWUgcGxhY2EgdMOpY25pY2EiLCAiUHJveWVjdG8iOiAiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbmZvcm1lVW5pRmFtaWxpYXJfMjAyNjAzMzBfMTcwMDAwIiwgIlByb3llY3RvIjogIkFqdXN0ZSAxMyBWaXN0YXMgTUxVIEFpcmUiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW5mb3JtZU90cmFzQ2FyZ2FzX1NlbWFmb3JvXzIwMjYwMzMwXzE3MDAwMCIsICJQcm95ZWN0byI6ICJBanVzdGUgMTMgVmlzdGFzIE1MVSBBaXJlIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkluZm9ybWVPdHJhc0Nhcmdhc19QdWJsaWNpZGFkXzIwMjYwMzMwXzE3MDAwMCIsICJQcm95ZWN0byI6ICJBanVzdGUgMTMgVmlzdGFzIE1MVSBBaXJlIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkluZm9ybWVPdHJhc0Nhcmdhc19DYW1hcmFfMjAyNjAzMzBfMTcwMDAwIiwgIlByb3llY3RvIjogIkFqdXN0ZSAxMyBWaXN0YXMgTUxVIEFpcmUiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW5mb3JtZU90cmFzQ2FyZ2FzX0FudGVuYV8yMDI2MDMzMF8xNzAwMDAiLCAiUHJveWVjdG8iOiAiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJGYXNlIDEgwrcgUmV2aXNhciBlbCBjw7NkaWdvIGZ1ZW50ZSIsICJQcm95ZWN0byI6ICJRQyBQbGF0Zm9ybSBDb25jZXNpw7NuIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIjQvMDYvMjAyNiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgMiDCtyBBbmFsaXphciBlbCBjw7NkaWdvIGZ1ZW50ZSIsICJQcm95ZWN0byI6ICJRQyBQbGF0Zm9ybSBDb25jZXNpw7NuIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgMyDCtyBQcm9iYXIgZW4gQmFzZSBkZSBEYXRvcyIsICJQcm95ZWN0byI6ICJRQyBQbGF0Zm9ybSBDb25jZXNpw7NuIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgNCDCtyBEZXNwbGllZ3VlIGVuIGVsIHNlcnZpZG9yIiwgIlByb3llY3RvIjogIlFDIFBsYXRmb3JtIENvbmNlc2nDs24iLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiKDE1ODgwKSBBQ1RVQUxJWkFDScOTTiBGT1JNVUxBUklPIENMSUVOVEUiLCAiUHJveWVjdG8iOiAiSU5DSURFTkNJQVMiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjEvMDcvMjAyNiIsICJGZWNoYSBGaW4iOiAiMS8wNy8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiSU5DSURFTkNJQVMifSwgeyJUYXJlYSI6ICIoMTU5MDYpIFNJTiBJTkZPUk1BQ0lPTiBFTiBBUCIsICJQcm95ZWN0byI6ICJJTkNJREVOQ0lBUyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMS8wNy8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxLzA3LzIwMjYiLCAiSG9yYXMiOiA5LjUsICJMaXN0YSI6ICJJTkNJREVOQ0lBUyJ9LCB7IlRhcmVhIjogIigxNTg2MSkgTk8gQVBBUkVDRSBFTiBFTCBSRVBPUlRFIERFIENPTlNPTElEQURPIiwgIlByb3llY3RvIjogIklOQ0lERU5DSUFTIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxLzA3LzIwMjYiLCAiRmVjaGEgRmluIjogIjIvMDcvMjAyNiIsICJIb3JhcyI6IDE5LjAsICJMaXN0YSI6ICJJTkNJREVOQ0lBUyJ9XX0sICJSZW56byBHb21leiI6IHsibW9udGhseV9ob3VycyI6IHsiMjAyNi0wMyI6IDAuMCwgIjIwMjYtMDQiOiAyNDIuNSwgIjIwMjYtMDUiOiAwLjAsICIyMDI2LTA2IjogMC4wLCAiMjAyNi0wNyI6IDAuMH0sICJwcm9qZWN0cyI6IHsiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSI6IDEzMi4wLCAiQ2FzbyBSZXBvcnRlIENvbnNvbGlkYWRvIENlbHNpYSI6IDE5LjAsICJBZ3JlZ2FyIFVVQ0MgRm9ybWFwIE1vdmlsIjogMC4wLCAiQWdyZWdhciBVVUNDIEZvcm1hcCBXRUIiOiAwLjAsICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSI6IDkxLjV9LCAic3RhdGVzIjogeyJmaW5hbGl6YWRvIjogMTN9LCAidGFza3MiOiBbeyJUYXJlYSI6ICJBanVzdGUgZGUgMTMgVmlzdGEgUHJveWVjdG8gTUxVIEFpcmUiLCAiUHJveWVjdG8iOiAiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiNi8wNC8yMDI2IiwgIkZlY2hhIEZpbiI6ICIyNC8wNC8yMDI2IiwgIkhvcmFzIjogMTMyLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDYXNvIHJlcG9ydGUgQ29uc29saWRhZG8gY2Vsc2lhIiwgIlByb3llY3RvIjogIkNhc28gUmVwb3J0ZSBDb25zb2xpZGFkbyBDZWxzaWEiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjIyLzA0LzIwMjYiLCAiRmVjaGEgRmluIjogIjIzLzA0LzIwMjYiLCAiSG9yYXMiOiAxOS4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQWdyZWdhciBVVUNDIExpc3RhIEZvcm1hcCBNb3ZpbCIsICJQcm95ZWN0byI6ICJBZ3JlZ2FyIFVVQ0MgRm9ybWFwIE1vdmlsIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkFncmVnYXIgVVVDQyBhIGNhcmd1ZSBnZW5lcmljbyBGb3JtYXAgV0VCIiwgIlByb3llY3RvIjogIkFncmVnYXIgVVVDQyBGb3JtYXAgV0VCIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkxpbXBpZXphIHkgcHJlcGFyYWNpb24gZGUgZGF0YXNvdXJjZSAtIEVzY2FuZW8gUHJvZHVjdGl2aWRhZCIsICJQcm95ZWN0byI6ICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMTAvMDQvMjAyNiIsICJGZWNoYSBGaW4iOiAiMTYvMDQvMjAyNiIsICJIb3JhcyI6IDQ0LjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJSZXZpc2lvbiBkZWwgQ3Jvbm9ncmFtYSBBY3R1YWwiLCAiUHJveWVjdG8iOiAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjYvMDQvMjAyNiIsICJGZWNoYSBGaW4iOiAiNi8wNC8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQW5hbGlzaXMgZGUgRXN0cnVjdHVyYSBkZSBEYXRvcyBDbGllbnRlcyBMZWN0dXJhcyIsICJQcm95ZWN0byI6ICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiNi8wNC8yMDI2IiwgIkZlY2hhIEZpbiI6ICI5LzA0LzIwMjYiLCAiSG9yYXMiOiAzOC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiTW9kZWxvIGRlIG9wdGltaXphY2nDs24gZGUgcnV0YXMgKG1pbmltaXphciBkaXN0YW5jaWFzKSIsICJQcm95ZWN0byI6ICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDbHVzdGVyaW5nIGdlb2dyw6FmaWNvIGNvbiBjb29yZGVuYWRhcyBHUFMiLCAiUHJveWVjdG8iOiAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQW7DoWxpc2lzIGRlIHJlbmRpbWllbnRvIHBvciBpbnNwZWN0b3IiLCAiUHJveWVjdG8iOiAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQ3JlYWNpw7NuIGRlbCBzZXJ2aWNpbyIsICJQcm95ZWN0byI6ICJBZ3JlZ2FyIFVVQ0MgRm9ybWFwIFdFQiIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJFc3RydWN0dXJhIGRlIGRhdG9zIiwgIlByb3llY3RvIjogIkFncmVnYXIgVVVDQyBGb3JtYXAgV0VCIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIk1vZGlmaWNhciBjYXJndWUgZ2Vuw6lyaWNvIiwgIlByb3llY3RvIjogIkFncmVnYXIgVVVDQyBGb3JtYXAgV0VCIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9XX0sICJKVUxJRVRURSBLQVJPTElORSBSQUNFRE8gQ09Mw5NOIjogeyJtb250aGx5X2hvdXJzIjogeyIyMDI2LTAzIjogMC4wLCAiMjAyNi0wNCI6IDAuMCwgIjIwMjYtMDUiOiAwLjAsICIyMDI2LTA2IjogMTU3LjAsICIyMDI2LTA3IjogNDcuNX0sICJwcm9qZWN0cyI6IHsiQm90IE1hbnRlbmltaWVudG8gRm90b3MgU3VydmV5ICg4MDgpIjogMC4wLCAiQXBsaWNhdGl2by9UYWJsZXJvIGRlIERCQSI6IDM4LjAsICJBdWRpdG9yw61hIEZvdG9ncsOhZmljYSBDZWxzaWEiOiAxNDcuNSwgIklOQ0lERU5DSUFTIjogMTkuMH0sICJzdGF0ZXMiOiB7InBydWViYXMiOiAzLCAiZW4gY3Vyc28iOiAzLCAiZmluYWxpemFkbyI6IDE4LCAiYmFja2xvZyI6IDR9LCAidGFza3MiOiBbeyJUYXJlYSI6ICJBcGxpY2F0aXZvL1RhYmxlcm8gZGUgREJBIiwgIlByb3llY3RvIjogIkFwbGljYXRpdm8vVGFibGVybyBkZSBEQkEiLCAiRXN0YWRvIjogInBydWViYXMiLCAiRmVjaGEgSW5pY2lvIjogIjEvMDcvMjAyNiIsICJGZWNoYSBGaW4iOiAiMzAvMDcvMjAyNiIsICJIb3JhcyI6IDE3Ni4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUmVwb3J0ZSBDb25zb2xpZGFkbyBQUVIgKDgxMykiLCAiUHJveWVjdG8iOiAiUmVwb3J0ZSBDb25zb2xpZGFkbyBQUVIgKDgxMykiLCAiRXN0YWRvIjogImVuIGN1cnNvIiwgIkZlY2hhIEluaWNpbyI6ICIyNi8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxNS8wNy8yMDI2IiwgIkhvcmFzIjogMTAzLjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJBdG9tYXRpemFjaW9uIEF1ZGl0b3JpYSBGb3RvZ3JhZmljYSBkZSBJbmZvcm1lcyBDZWxzaWEiLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJwcnVlYmFzIiwgIkZlY2hhIEluaWNpbyI6ICIxMC8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICI3LzA3LzIwMjYiLCAiSG9yYXMiOiAxNTcuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkFjdHVhbGl6YWNpb24gQm90IG1hbnRlbmltaWVudG8gRm90b3MgU3VydmV5ICg4MDgpIiwgIlByb3llY3RvIjogIkJvdCBNYW50ZW5pbWllbnRvIEZvdG9zIFN1cnZleSAoODA4KSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIxNS8wNi8yMDI2IiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUmVhbGl6YXIgZWwgZGlzZcOxbyBmdW5jaW9uYWwgZGVsIGFwbGljYXRpdm8iLCAiUHJveWVjdG8iOiAiQXBsaWNhdGl2by9UYWJsZXJvIGRlIERCQSIsICJFc3RhZG8iOiAiZW4gY3Vyc28iLCAiRmVjaGEgSW5pY2lvIjogIjgvMDcvMjAyNiIsICJGZWNoYSBGaW4iOiAiOS8wNy8yMDI2IiwgIkhvcmFzIjogMTkuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkxldmFudGFtaWVudG8gZGUgcmVxdWVyaW1pZW50b3MtUmV1bmlvbjQiLCAiUHJveWVjdG8iOiAiQXBsaWNhdGl2by9UYWJsZXJvIGRlIERCQSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiNy8wNy8yMDI2IiwgIkZlY2hhIEZpbiI6ICI3LzA3LzIwMjYiLCAiSG9yYXMiOiA5LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJMZXZhbnRhbWllbnRvIGRlIHJlcXVlcmltaWVudG9zLVJldW5pb24zIiwgIlByb3llY3RvIjogIkFwbGljYXRpdm8vVGFibGVybyBkZSBEQkEiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjYvMDcvMjAyNiIsICJGZWNoYSBGaW4iOiAiNi8wNy8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiTGV2YW50YW1pZW50byBkZSByZXF1ZXJpbWllbnRvcy1SZXVuaW9uMiIsICJQcm95ZWN0byI6ICJBcGxpY2F0aXZvL1RhYmxlcm8gZGUgREJBIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIyLzA3LzIwMjYiLCAiRmVjaGEgRmluIjogIjIvMDcvMjAyNiIsICJIb3JhcyI6IDkuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkxldmFudGFtaWVudG8gZGUgcmVxdWVyaW1pZW50b3MtUmV1bmlvbjEiLCAiUHJveWVjdG8iOiAiQXBsaWNhdGl2by9UYWJsZXJvIGRlIERCQSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMS8wNy8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxLzA3LzIwMjYiLCAiSG9yYXMiOiA5LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJQYXNlIGEgcHJvZHVjY2nDs24g4oCUIGNvbmZpZ3VyYWNpw7NuIHNlcnZpZG9yIEJvdFBERiBUYXNrIFNjaGVkdWxlciAyQU0gLmVudiBQUk9EIG1vbml0b3JlbyBsb2dzIiwgIlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIENlbHNpYSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMjQvMDYvMjAyNiIsICJGZWNoYSBGaW4iOiAiMzAvMDYvMjAyNiIsICJIb3JhcyI6IDM0LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJQcnVlYmFzIGNvbiDDs3JkZW5lcyByZWFsZXMgU2hhcmVQb2ludCDigJQgdmFsaWRhY2nDs24gcnV0YXMgZm90b3MgcmVhbGVzIGzDs2dpY2EgMiszKzMiLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxOC8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIyMy8wNi8yMDI2IiwgIkhvcmFzIjogMzQuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkltcGxlbWVudGFjacOzbiBkZSBtw7NkdWxvIGRlIG5vdGlmaWNhY2lvbmVzIOKAlCBjb3JyZW9zIEhUTUwgcG9yIHpvbmEgdsOtYSBPdXRsb29rIHdpbjMyY29tIiwgIlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIENlbHNpYSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIxOC8wNi8yMDI2IiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW1wbGVtZW50YWNpw7NuIGRlIG1vdG9yIGRlIHZpc2nDs24gaMOtYnJpZG8g4oCUIEdlbWluaSAyLjUgRmxhc2giLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxNi8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxNy8wNi8yMDI2IiwgIkhvcmFzIjogMTkuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkltcGxlbWVudGFjacOzbiBkZSBnZW5lcmFjacOzbiBkZSByZXBvcnRlcyDigJQgRXhjZWwgZGlhcmlvIHBvciB6b25hIGNvbiBkYXNoYm9hcmQiLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxNy8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxNy8wNi8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW1wbGVtZW50YWNpw7NuIGRlIGNhcGEgZGUgaW50ZWdyYWNpw7NuIFNRTCBTZXJ2ZXIg4oCUIGNvbnN1bHRhIGRpbsOhbWljYSBkZSBzZWN0b3JlcyIsICJQcm95ZWN0byI6ICJBdWRpdG9yw61hIEZvdG9ncsOhZmljYSBDZWxzaWEiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIjE2LzA2LzIwMjYiLCAiRmVjaGEgRmluIjogIjE2LzA2LzIwMjYiLCAiSG9yYXMiOiA5LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbXBsZW1lbnRhY2nDs24gZGUgYXJxdWl0ZWN0dXJhIGJhc2UgQ2xlYW4gQXJjaGl0ZWN0dXJlIiwgIlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIENlbHNpYSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMTIvMDYvMjAyNiIsICJGZWNoYSBGaW4iOiAiMTYvMDYvMjAyNiIsICJIb3JhcyI6IDE1LjUsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbnZlc3RpZ2FjacOzbiBkZSBDb3N0b3MiLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxMS8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxMi8wNi8yMDI2IiwgIkhvcmFzIjogMTUuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkFuYWxpc2lzIGRlbCBQcm95ZWN0byBCb3QgTkMiLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIxMC8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxMC8wNi8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUmV1bmnDs24geSBsZXZhbnRhbWllbnRvIGRlIHJlcXVlcmltaWVudG9zIiwgIlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIENlbHNpYSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIxMC8wNi8yMDI2IiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQW5hbGlzaXMgZGVsIHJlcXVlcmltaWVudG8iLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIjEwLzA2LzIwMjYiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJGYXNlIDEgwrcgUmV2aXNhciBlbCBjw7NkaWdvIGZ1ZW50ZSIsICJQcm95ZWN0byI6ICJRQyBQbGF0Zm9ybSBDb25jZXNpw7NuIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIjQvMDYvMjAyNiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgMiDCtyBBbmFsaXphciBlbCBjw7NkaWdvIGZ1ZW50ZSIsICJQcm95ZWN0byI6ICJRQyBQbGF0Zm9ybSBDb25jZXNpw7NuIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgMyDCtyBQcm9iYXIgZW4gQmFzZSBkZSBEYXRvcyIsICJQcm95ZWN0byI6ICJRQyBQbGF0Zm9ybSBDb25jZXNpw7NuIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgNCDCtyBEZXNwbGllZ3VlIGVuIGVsIHNlcnZpZG9yIiwgIlByb3llY3RvIjogIlFDIFBsYXRmb3JtIENvbmNlc2nDs24iLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiTm8gZGVzY2FyZ2EgZGVsIFBERiAtIE10dG8gVmFsbGUiLCAiUHJveWVjdG8iOiAiSU5DSURFTkNJQVMiLCAiRXN0YWRvIjogImVuIGN1cnNvIiwgIkZlY2hhIEluaWNpbyI6ICI2LzA3LzIwMjYiLCAiRmVjaGEgRmluIjogIjgvMDcvMjAyNiIsICJIb3JhcyI6IDI4LjUsICJMaXN0YSI6ICJJTkNJREVOQ0lBUyJ9LCB7IlRhcmVhIjogIkJvdCBkZSBNdHRvIFRvbGltYS9FcnJvciBkZSBlamVjdWNpw7NuIiwgIlByb3llY3RvIjogIklOQ0lERU5DSUFTIiwgIkVzdGFkbyI6ICJwcnVlYmFzIiwgIkZlY2hhIEluaWNpbyI6ICI3LzA3LzIwMjYiLCAiRmVjaGEgRmluIjogIjgvMDcvMjAyNiIsICJIb3JhcyI6IDE5LjAsICJMaXN0YSI6ICJJTkNJREVOQ0lBUyJ9LCB7IlRhcmVhIjogIigxNTg3NCkgQ09ORklHVVJBQ0nDk04gQlVTUVVFREEgTklUIC0gRk9STVVMQVJJTyBDTElFTlRFIiwgIlByb3llY3RvIjogIklOQ0lERU5DSUFTIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICI2LzA3LzIwMjYiLCAiRmVjaGEgRmluIjogIjYvMDcvMjAyNiIsICJIb3JhcyI6IDkuNSwgIkxpc3RhIjogIklOQ0lERU5DSUFTIn0sIHsiVGFyZWEiOiAiT1NDUCBRVUUgU0UgRU5DVUVOVFJBIE5PIENPTkZPUk1FUyBTSU4gU09QT1JURVMgRU4gU0hBUkUgUE9JTlQgREUgSVNFUyAoMTU4ODQpIiwgIlByb3llY3RvIjogIklOQ0lERU5DSUFTIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIzMC8wNi8yMDI2IiwgIkZlY2hhIEZpbiI6ICIzMC8wNi8yMDI2IiwgIkhvcmFzIjogOS41LCAiTGlzdGEiOiAiSU5DSURFTkNJQVMifV19LCAiU2luIEFzaWduYXIiOiB7Im1vbnRobHlfaG91cnMiOiB7IjIwMjYtMDMiOiAyNS4wLCAiMjAyNi0wNCI6IDEwNy4wLCAiMjAyNi0wNSI6IDAuMCwgIjIwMjYtMDYiOiAwLjAsICIyMDI2LTA3IjogMC4wfSwgInByb2plY3RzIjogeyJNb2RpZmljYXIgQm90IE1hbnRlbmltaWVudG8gVVVDQyI6IDAuMCwgIlZhbGlkYWNpw7NuIExVTV9BSVJFIjogMC4wLCAiUmVwb3J0ZSBMdW1pbmFyaWFzIjogMC4wLCAiUmVwb3J0ZSBCdWNrIFVwIjogMC4wLCAiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSI6IDAuMCwgIlJlcG9ydGUgSW5zcGVjY2nDs24gSW5zdC4gRWzDqWN0cmljYXMiOiAwLjAsICJBZ3JlZ2FyIFVVQ0MgRm9ybWFwIE1vdmlsIjogMC4wLCAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiOiAxMzIuMCwgIlBhcmFtZXRyaXphY2nDs24gQXVkaXRvcsOtYXMgTHV0ZWMiOiAwLjAsICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byI6IDAuMH0sICJzdGF0ZXMiOiB7ImZpbmFsaXphZG8iOiAyNSwgImJhY2tsb2ciOiA1MSwgImJsb3F1ZWFkbyI6IDEsICJ0byBkbyI6IDEwLCAiZW4gY3Vyc28iOiA2LCAicmV1bmlvbmVzIjogMX0sICJ0YXNrcyI6IFt7IlRhcmVhIjogIk1vZGlmaWNhciBCb3QgbWFudGVuaW1pZW50byAtIFVVQ0MiLCAiUHJveWVjdG8iOiAiTW9kaWZpY2FyIEJvdCBNYW50ZW5pbWllbnRvIFVVQ0MiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiU29saWNpdHVkIGRlIHZhbGlkYWNpw7NuOiBSZWdpc3Ryb3MgZGUgbGEgcnV0YSBMVU1fQUlSRV9QTF8yNyAoMTQ4MzQpIiwgIlByb3llY3RvIjogIlZhbGlkYWNpw7NuIExVTV9BSVJFIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlJlcG9ydGUgTHVtaW5hdGlhcyBjYXNvIiwgIlByb3llY3RvIjogIlJlcG9ydGUgTHVtaW5hcmlhcyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJSZXBvcnRlIEJ1Y2sgdXAgY29tcGxldG8gKDE0ODcwKSIsICJQcm95ZWN0byI6ICJSZXBvcnRlIEJ1Y2sgVXAiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiNS8wNS8yMDI2IiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUHJvY2VzbyBDb250YWN0IENlbnRlciAtIENhbGlkYWQgZW4gZWwgU2VydmljaW8iLCAiUHJveWVjdG8iOiAiUHJvY2VzbyBDb250YWN0IENlbnRlciIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJBdG9tYXRpemFjaW9uIEF1ZGl0b3JpYSBGb3RvZ3JhZmljYSBkZSBJbmZvcm1lcyBFTVNBIiwgIlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIEVNU0EiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUUMgUGxhdGZvcm0gQ29uY2VzaW9uIC0gTXVsdGlwcm95ZWN0byIsICJQcm95ZWN0byI6ICJRQyBQbGF0Zm9ybSBDb25jZXNpw7NuIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkNyZWFjaW9uIGZvcm11bGFyaW8gUkVDSUJPIFRFQ05JQ8OTIHkgMyBzdWJjb21wb25lbnRlcyg4MTEpIiwgIlByb3llY3RvIjogIkZvcm11bGFyaW8gUkVDSUJPIFTDiUNOSUNPICg4MTEpIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlByb2Nlc28gU1ZSIC0gR2VzdGnDs24gZGUgQ2FydGVyYSBJbnRlbGlnZW50ZSIsICJQcm95ZWN0byI6ICJQcm9jZXNvIFNWUiBDYXJ0ZXJhIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlByb2Nlc28gTHlSIC0gTGVjdHVyYSBDb25maWFibGUiLCAiUHJveWVjdG8iOiAiUHJvY2VzbyBMeVIiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiU0lTVEVNQSBDRU5UUkFMSVpBRE8gREUgR0VTVEnDk04gWSBPUFRJTUlaQUNJw5NOIERFIE9GRVJUQVMgVMOJQ05JQ0FTIiwgIlByb3llY3RvIjogIlNpc3RlbWEgT2ZlcnRhcyBUw6ljbmljYXMiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiR2VuZXJhY2lvbiBBdXRvbWF0aWNhIGRlIFBsYW50aWxsYXMiLCAiUHJveWVjdG8iOiAiR2VuZXJhY2nDs24gUGxhbnRpbGxhcyIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJPcHRpbWl6YWNpw7NuIGRlbCBjcm9ub2dyYW1hIGRlIGZhY3R1cmFjacOzbiBFbXNhIiwgIlByb3llY3RvIjogIk9wdGltaXphY2nDs24gQ3Jvbm9ncmFtYSBFTVNBIiwgIkVzdGFkbyI6ICJibG9xdWVhZG8iLCAiRmVjaGEgSW5pY2lvIjogIjI3LzAzLzIwMjYiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkluZm9ybWVTZWd1aW1pZW50b0xldmFudGFtaWVudG9fMjAyNjAzMzBfMTcwMDAwIiwgIlByb3llY3RvIjogIkFqdXN0ZSAxMyBWaXN0YXMgTUxVIEFpcmUiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW5mb3JtZUNsaWVudGVzTUxVXzIwMjYwMzMwXzE3MDAwMCIsICJQcm95ZWN0byI6ICJBanVzdGUgMTMgVmlzdGFzIE1MVSBBaXJlIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkluZm9ybWUgZm90b3MgcGxhY2EgdGVjbmljYSBkZSB0cmFuc2Zvcm1hZG9yZSIsICJQcm95ZWN0byI6ICJBanVzdGUgMTMgVmlzdGFzIE1MVSBBaXJlIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkluZm9ybWVBcG95b3NCVF9NQVRfMjAyNjAzMzBfMTcwMDAwIiwgIlByb3llY3RvIjogIkFqdXN0ZSAxMyBWaXN0YXMgTUxVIEFpcmUiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW5mb3JtZUFwYXJ0YW1lbnRvSW50ZXJpb3JfMjAyNjAzMzBfMTcwMDAwIiwgIlByb3llY3RvIjogIkFqdXN0ZSAxMyBWaXN0YXMgTUxVIEFpcmUiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW5mb3JtZVRyYW1vQlRfMjAyNjAzMzBfMTcwMDAwIiwgIlByb3llY3RvIjogIkFqdXN0ZSAxMyBWaXN0YXMgTUxVIEFpcmUiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW5mb3JtZU1lZGlkb3JQb3N0ZU1BVF8yMDI2MDMzMF8xNzAwMDAiLCAiUHJveWVjdG8iOiAiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDcmVhY2nDs24gZGUgUGxhbnRpbGxhIFJlcG9ydGUiLCAiUHJveWVjdG8iOiAiUmVwb3J0ZSBJbnNwZWNjacOzbiBJbnN0LiBFbMOpY3RyaWNhcyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJEaXNlw7FvIGRlIENvbnN1bHRhIEJhc2UgZGUgZGF0b3MiLCAiUHJveWVjdG8iOiAiUmVwb3J0ZSBJbnNwZWNjacOzbiBJbnN0LiBFbMOpY3RyaWNhcyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJpbXBsZW1lbnRhY2nDs24gc2VydmljZWVzIGVuIGZvcm1hdCBtb3ZpbCIsICJQcm95ZWN0byI6ICJBZ3JlZ2FyIFVVQ0MgRm9ybWFwIE1vdmlsIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkltcGxlbWVudGFjacOzbiBkZSBsYSBsw7NnaWNhIGRlbCBzZXJ2aWNpbyBwYXJhIHZpc3VhbGl6YWNpw7NuIGRlIG1hdGVyaWFsZXMiLCAiUHJveWVjdG8iOiAiQWdyZWdhciBVVUNDIEZvcm1hcCBNb3ZpbCIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJQYXJhbWV0cml6YWNpw7NuIGRlbCBmb3JtdWxhcmlvIiwgIlByb3llY3RvIjogIkFncmVnYXIgVVVDQyBGb3JtYXAgTW92aWwiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiU1QtMDEgwrcgS2lja29mZiB5IGxldmFudGFtaWVudG8gZGUgcmVxdWVyaW1pZW50b3MiLCAiUHJveWVjdG8iOiAiUHJvY2VzbyBDb250YWN0IENlbnRlciIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJTVC0wMiDCtyBEaXNlw7FvIGRlIGFycXVpdGVjdHVyYSBkZSBsYSBzb2x1Y2nDs24iLCAiUHJveWVjdG8iOiAiUHJvY2VzbyBDb250YWN0IENlbnRlciIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJTVC0wMyDCtyBJbnRlZ3JhY2nDs24gZGUgU3BlZWNoLXRvLVRleHQgcGFyYSBjYW5hbGVzIGRlIHZveiIsICJQcm95ZWN0byI6ICJQcm9jZXNvIENvbnRhY3QgQ2VudGVyIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlNULTA0IMK3IEludGVncmFjacOzbiBkZSBwcm9jZXNhbWllbnRvIGRlIHRleHRvIChOTFApIiwgIlByb3llY3RvIjogIlByb2Nlc28gQ29udGFjdCBDZW50ZXIiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiU1QtMDUgwrcgRGVzYXJyb2xsbyBkZWwgbW90b3IgZGUgZXZhbHVhY2nDs24gZGUgY2FsaWRhZCIsICJQcm95ZWN0byI6ICJQcm9jZXNvIENvbnRhY3QgQ2VudGVyIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlNULTA2IMK3IERldGVjY2nDs24gZGUgcGF0cm9uZXMgeSBvcG9ydHVuaWRhZGVzIGRlIG1lam9yYSIsICJQcm95ZWN0byI6ICJQcm9jZXNvIENvbnRhY3QgQ2VudGVyIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlNULTA3IMK3IEdlbmVyYWNpw7NuIGRlIHJlcG9ydGVzIHBhcmEgaW50ZXJ2ZW50b3LDrWEiLCAiUHJveWVjdG8iOiAiUHJvY2VzbyBDb250YWN0IENlbnRlciIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJTVC0wOCDCtyBRQSBpbnRlcm5vIHkgcHJ1ZWJhcyBjb24gZGF0b3MgcmVhbGVzIiwgIlByb3llY3RvIjogIlByb2Nlc28gQ29udGFjdCBDZW50ZXIiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiU1QtMDkgwrcgVUFUIHkgZW50cmVnYSBhbCBjbGllbnRlIiwgIlByb3llY3RvIjogIlByb2Nlc28gQ29udGFjdCBDZW50ZXIiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRGlzZcOxbyBkZWwgZmx1am8gZGUgdmFsaWRhY2nDs24iLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgRU1TQSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbnRlZ3JhY2nDs24gZGUgYW7DoWxpc2lzIGRlIGltYWdlbiIsICJQcm95ZWN0byI6ICJBdWRpdG9yw61hIEZvdG9ncsOhZmljYSBFTVNBIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIk1vdG9yIGRlIGRldGVjY2nDs24gZGUgZnJhdWRlIiwgIlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIEVNU0EiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiR2VuZXJhY2nDs24gZGUgcmVwb3J0ZSBkZSBkaXNjcmVwYW5jaWFzIiwgIlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIEVNU0EiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiVmFsaWRhY2nDs24gaW50ZXJuYSB5IHBydWViYXMgY29uIGRhdG9zIHJlYWxlcyIsICJQcm95ZWN0byI6ICJBdWRpdG9yw61hIEZvdG9ncsOhZmljYSBFTVNBIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkF1dG9tYXRpemFjaW9uIEJvdCBnZW5lcmFjaW9uIHJlcG9ydGVzIGdlbmVyYWxlcyBTaGFyZVBvaW50IiwgIlByb3llY3RvIjogIkZvcm11bGFyaW8gUkVDSUJPIFTDiUNOSUNPICg4MTEpIiwgIkVzdGFkbyI6ICJ0byBkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDb25maWd1cmFjaW9uIHJlcG9ydGVzIG1hc2l2b3MgRVhDRUwgKG1vZHVsbyBkZSBkZXNjYXJnYSkiLCAiUHJveWVjdG8iOiAiRm9ybXVsYXJpbyBSRUNJQk8gVMOJQ05JQ08gKDgxMSkiLCAiRXN0YWRvIjogInRvIGRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkNvbmZpZ3VyYWNpb24gcmVwb3J0ZSBnZW5lcmFsIHkgcGFydGljdWxhcmVzIGVudHJlZ2FibGVzIEVYQ0VMIiwgIlByb3llY3RvIjogIkZvcm11bGFyaW8gUkVDSUJPIFTDiUNOSUNPICg4MTEpIiwgIkVzdGFkbyI6ICJ0byBkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDb25maWd1cmFjaW9uIGVzcGVyYWRhIGZvcm11bGFyaW9zIEZvck1hcCIsICJQcm95ZWN0byI6ICJGb3JtdWxhcmlvIFJFQ0lCTyBUw4lDTklDTyAoODExKSIsICJFc3RhZG8iOiAidG8gZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiR2VuZXJhY2nDs24gZGUgcHJlc3VwdWVzdG9zIHkgQXB1IGRlIG1hbmVyYSBhdXRvbWF0aXphZGEgKDc0NikiLCAiUHJveWVjdG8iOiAiUHJvY2VzbyBMeVIiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiQXJxdWl0ZWN0dXJhIEJhc2UgVmlhYmlsaWRhZCBUw6ljbmljYSB5IFJlcXVlcmltaWVudG9zIiwgIlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJlbiBjdXJzbyIsICJGZWNoYSBJbmljaW8iOiAiMzAvMDYvMjAyNiIsICJGZWNoYSBGaW4iOiAiOC8wNy8yMDI2IiwgIkhvcmFzIjogNjMuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkRlc3BsZWdhciBlc3RydWN0dXJhIGRlIENsZWFuIEFyY2hpdGVjdHVyZSBlbiBQeXRob24gY29uIFB5ZGFudGljIHkgLmVudi4iLCAiUHJveWVjdG8iOiAiUmVwb3J0ZSBDb25zb2xpZGFkbyBQUVIgKDgxMykiLCAiRXN0YWRvIjogInRvIGRvIiwgIkZlY2hhIEluaWNpbyI6ICI2LzA3LzIwMjYiLCAiRmVjaGEgRmluIjogIjcvMDcvMjAyNiIsICJIb3JhcyI6IDE5LjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbnRlZ3JhY2nDs24gZGUgRGF0b3MgQXV0ZW50aWNhY2nDs24geSBEZXNjYXJnYSBTU1JTIiwgIlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJ0byBkbyIsICJGZWNoYSBJbmljaW8iOiAiNy8wNy8yMDI2IiwgIkZlY2hhIEZpbiI6ICI4LzA3LzIwMjYiLCAiSG9yYXMiOiAxOS4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiTW90b3IgZGUgRW5ydXRhbWllbnRvIE9ycXVlc3RhY2nDs24gUGFyYWxlbGEgeSBBbGVydGFzIiwgIlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJ0byBkbyIsICJGZWNoYSBJbmljaW8iOiAiOS8wNy8yMDI2IiwgIkZlY2hhIEZpbiI6ICIxMC8wNy8yMDI2IiwgIkhvcmFzIjogMTUuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlZlcmlmaWNhY2nDs24gZGUgRmx1am8gQ29tcGxldG8geSBEZXNwbGllZ3VlIGVuIFByb2R1Y2Npw7NuIiwgIlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJ0byBkbyIsICJGZWNoYSBJbmljaW8iOiAiMTQvMDcvMjAyNiIsICJGZWNoYSBGaW4iOiAiMTUvMDcvMjAyNiIsICJIb3JhcyI6IDE5LjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJBTkFMU0lTIFkgRVNUSU1BQ0lPTiIsICJQcm95ZWN0byI6ICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiMjcvMDMvMjAyNiIsICJGZWNoYSBGaW4iOiAiMS8wNC8yMDI2IiwgIkhvcmFzIjogMzQuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgMSBMaW1waWV6YSB5IHByZXBhcmFjaW9uIGRlIGRhdG9zIiwgIlByb3llY3RvIjogIk9wdGltaXphY2nDs24gQ3Jvbm9ncmFtYSBFTVNBIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICI2LzA0LzIwMjYiLCAiRmVjaGEgRmluIjogIjIwLzA0LzIwMjYiLCAiSG9yYXMiOiA5Ny41LCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRmFzZSAyIEVzdHJ1Y3R1cmEgeSBFbnRyZW5hbWllbnRvIGRlbCBNb2RlbG8iLCAiUHJveWVjdG8iOiAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiLCAiRXN0YWRvIjogImVuIGN1cnNvIiwgIkZlY2hhIEluaWNpbyI6ICIyMC8wNC8yMDI2IiwgIkZlY2hhIEZpbiI6ICI4LzA1LzIwMjYiLCAiSG9yYXMiOiAxMjYuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkluZm9ybWUgQ29uc29saWRhZG8gZGUgQXVkaXRvcmlhIEVuZXJnYXRpY2EgTHV0ZWMiLCAiUHJveWVjdG8iOiAiUGFyYW1ldHJpemFjacOzbiBBdWRpdG9yw61hcyBMdXRlYyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIyNy8wNS8yMDI2IiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW5mb3JtYSBBY3RhIGRlIGluaWNpbyIsICJQcm95ZWN0byI6ICJQYXJhbWV0cml6YWNpw7NuIEF1ZGl0b3LDrWFzIEx1dGVjIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIjI4LzA1LzIwMjYiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbmZvcm1lIEFjdGEgRmluYWwiLCAiUHJveWVjdG8iOiAiUGFyYW1ldHJpemFjacOzbiBBdWRpdG9yw61hcyBMdXRlYyIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIyOC8wNS8yMDI2IiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRmFzZSAxIC0gTW9kaWZpY2FjacOzbiBkZWwgRm9ybXVsYXJpbyBQUVIgU0lMVklDVUxUVVJBL1BRUiBQT0RBIiwgIlByb3llY3RvIjogIkFjdHVhbGl6YWNpw7NuIDIzMzIvMjM1MiB5IFJlcG9ydGVzIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICI5LzA2LzIwMjYiLCAiRmVjaGEgRmluIjogIjkvMDYvMjAyNiIsICJIb3JhcyI6IDkuNSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIlJldW5pw7NuIHkgbGV2YW50YW1pZW50byBkZSByZXF1ZXJpbWllbnRvcyIsICJQcm95ZWN0byI6ICJBdWRpdG9yw61hIEZvdG9ncsOhZmljYSBFTVNBIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIjExLzA2LzIwMjYiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJEQVlMSSIsICJQcm95ZWN0byI6ICJJTkNJREVOQ0lBUyIsICJFc3RhZG8iOiAicmV1bmlvbmVzIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIklOQ0lERU5DSUFTIn0sIHsiVGFyZWEiOiAiTGV2YW50YXIgcmVxdWVyaW1pZW50b3MgYWNjZXNvcyBwYXLDoW1ldHJvcyBTU1JTIHkgYW5hbGl6YXIgcmV1c2FiaWxpZGFkIGRlbCBCb3QgTkMuIiwgIlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJlbiBjdXJzbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICI2LzA3LzIwMjYiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDcmVhciBTZXNzaW9uTWFuYWdlciBUaHJlYWQtc2FmZSBwYXJhIGxvZ2luIHkgcmVmcmVzY28gaGVhZGxlc3MgZW4gRm9yTWFwLiIsICJQcm95ZWN0byI6ICJSZXBvcnRlIENvbnNvbGlkYWRvIFBRUiAoODEzKSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbXBsZW1lbnRhciBjYXBhIFNRTCBTZXJ2ZXIgKGxlY3R1cmEgZGUgcGVuZGllbnRlcyB5IGFjdHVhbGl6YWNpw7NuIGRlIGVzdGFkb3MgY29uIHB5b2RiYykuIiwgIlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkRlc2Fycm9sbGFyIGVsIGNvbmVjdG9yIHBhcmEgbGEgZXh0cmFjY2nDs24geSB2YWxpZGFjacOzbiBkZSBsb3MgcmVwb3J0ZXMgZW4gZm9ybWF0byBFeGNlbCIsICJQcm95ZWN0byI6ICJSZXBvcnRlIENvbnNvbGlkYWRvIFBRUiAoODEzKSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJJbXBsZW1lbnRhciBlbCBvcnF1ZXN0YWRvciBwYXJhbGVsbyBjb24gVGhyZWFkUG9vbEV4ZWN1dG9yIHkgZWwgbG9vcCBhZGFwdGF0aXZvIGRlIGNvbnN1bHRhLiIsICJQcm95ZWN0byI6ICJSZXBvcnRlIENvbnNvbGlkYWRvIFBRUiAoODEzKSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJEZXNhcnJvbGxhciBtb3RvciBkZSBydXRhcyBwYXJhIFNoYXJlUG9pbnQgY29uIHNvcG9ydGUgZGUgcGF0aHMgbGFyZ29zIHkgc2FuaXRpemFjacOzbi4iLCAiUHJveWVjdG8iOiAiUmVwb3J0ZSBDb25zb2xpZGFkbyBQUVIgKDgxMykiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiSW1wbGVtZW50YXIgZWwgc2lzdGVtYSBkZSBub3RpZmljYWNpb25lcyBwb3IgY29ycmVvIHBhcmEgcmVwb3J0YXIgZXJyb3JlcyBlbiB0aWVtcG8gcmVhbCIsICJQcm95ZWN0byI6ICJSZXBvcnRlIENvbnNvbGlkYWRvIFBRUiAoODEzKSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJWYWxpZGFyIGVsIGZ1bmNpb25hbWllbnRvIGRlbCBib3QgZGUgcHJpbmNpcGlvIGEgZmluIGNvbiAxMCBjYXNvcyByZWFsZXMgeSBhanVzdGFyIHRpbWVvdXRzLiIsICJQcm95ZWN0byI6ICJSZXBvcnRlIENvbnNvbGlkYWRvIFBRUiAoODEzKSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDb25maWd1cmFyIGVudG9ybm8gZGUgcHJvZHVjY2nDs24gZSBpbXBsZW1lbnRhciBhdXRvbWF0aXphY2nDs24gZW4gV2luZG93cyBUYXNrIFNjaGVkdWxlci4iLCAiUHJveWVjdG8iOiAiUmVwb3J0ZSBDb25zb2xpZGFkbyBQUVIgKDgxMykiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUmVhbGl6YXIgdHJhbnNmZXJlbmNpYSBkZSBjb25vY2ltaWVudG8gYWwgZXF1aXBvIHkgZW50cmVnYXIgbWFudWFsIGRlIG9wZXJhY2nDs24iLCAiUHJveWVjdG8iOiAiUmVwb3J0ZSBDb25zb2xpZGFkbyBQUVIgKDgxMykiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiUHJ1ZWJhIiwgIlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJ0byBkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJQcnVlYmEgZW4gcHJvZHVjY2nDs24iLCAiUHJveWVjdG8iOiAiQXVkaXRvcsOtYSBGb3RvZ3LDoWZpY2EgQ2Vsc2lhIiwgIkVzdGFkbyI6ICJlbiBjdXJzbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJEw61hIDY6IEVuZHBvaW50IGRlIGZpbHRyb3MgZGlzcG9uaWJsZXMgZGVzZGUgRm9ybWFwIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgNzogU2luY3Jvbml6YWNpw7NuIGZpbHRyYWRhIE5DIHBvciB6b25hL3NlY3Rvci9hY3RpdmlkYWQiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRMOtYSA4OiBDYXBhIGRlIGNhbGlkYWQgZGUgZGF0b3MiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRMOtYSA5OiBJbnRlZ3JhciB5IGFmaW5hciBlbCBtb3RvciBkZSB0aWVtcG9zIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMTA6IEVuZHBvaW50cyBkZWwgc2Vtw6Fmb3JvIGZpbHRyYWRvcyBwb3Igem9uYSIsICJQcm95ZWN0byI6ICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJEw61hIDExOiBDb25leGnDs24gYSBNaWNyb3NvZnQgR3JhcGggeSBhdXRlbnRpY2FjacOzbiBkZWwgYm90IiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMTI6IELDunNxdWVkYSBkZSBjb3JyZW9zIGVudmlhZG9zIHkgYWRqdW50b3MiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRMOtYSAxMzogQ2Fzb3MgZXNwZWNpYWxlcyAoY2FyZ3VlIGEgU2hhcmVQb2ludCBkZSBDZWxzaWEpIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMTQ6IE1vdG9yIGRlIGNydWNlIChsbGF2ZSDDum5pY2EpIGFtYXJyYXIgTkMgLSBpbmZvcm1lIC0gY29ycmVvIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMTU6IFdvcmtlciBkZWwgYm90IChhdWRpdG9yw61hIGRpYXJpYSkiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRMOtYSAxNjogUmVwb3J0ZSBkZSBjb25jaWxpYWNpw7NuIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMTc6IFRhYmxlcm8gdGFyamV0YXMgZGUgc2Vtw6Fmb3JvICsgc2VsZWN0b3IiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRMOtYSAxODogVGFibGEgZGUgYWxlcnRhcyArIGRldGFsbGUgZGUgTkMgY29uIHN1IGNydWNlIiwgIlByb3llY3RvIjogIkF1dG9tYXRpemFjacOzbiBOQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkTDrWEgMTk6IFBydWViYXMgZGUgcHJpbmNpcGlvIGEgZmluIGNvbiBkYXRvcyByZWFsZXMiLCAiUHJveWVjdG8iOiAiQXV0b21hdGl6YWNpw7NuIE5DIE1hbnRlbmltaWVudG8iLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRMOtYSAyMDogUHJvZ3JhbWFyIGVsIGJvdCBkaWFyaW8gKFRhc2sgU2NoZWR1bGVyKSB5IGFqdXN0ZXMgZmluYWxlcyIsICJQcm95ZWN0byI6ICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJGYXNlIDMgRGVzcGxpZWd1ZSB5IFBpbG90byIsICJQcm95ZWN0byI6ICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSIsICJFc3RhZG8iOiAidG8gZG8iLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiU2ltdWxhY2nDs24gZGUgZXNjZW5hcmlvcyAobWV0YTogMjAgZMOtYXMgbcOheGltbykiLCAiUHJveWVjdG8iOiAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiLCAiRXN0YWRvIjogImVuIGN1cnNvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIk1vZGVsbyBkZSBiYWxhbmNlbyBkZSBjYXJnYXMiLCAiUHJveWVjdG8iOiAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiLCAiRXN0YWRvIjogImVuIGN1cnNvIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkRlc3BsaWVndWUiLCAiUHJveWVjdG8iOiAiT3B0aW1pemFjacOzbiBDcm9ub2dyYW1hIEVNU0EiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiVmFsaWRhY2nDs24gY3J1emFkYSBjb24gZGF0b3MgaGlzdMOzcmljb3MgQWJyaWwgTWF5byIsICJQcm95ZWN0byI6ICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJUYXJlYSI6ICJDYWxpYnJhY2nDs24gZGVsIG1vZGVsbyBwb3IgQ2ljbG9zIiwgIlByb3llY3RvIjogIk9wdGltaXphY2nDs24gQ3Jvbm9ncmFtYSBFTVNBIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkNhbGlicmFjacOzbiBkZWwgbW9kZWxvIiwgIlByb3llY3RvIjogIk9wdGltaXphY2nDs24gQ3Jvbm9ncmFtYSBFTVNBIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkZlY2hhIEluaWNpbyI6ICIiLCAiRmVjaGEgRmluIjogIiIsICJIb3JhcyI6IDAuMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlRhcmVhIjogIkZhc2UgMiAtIENvbmV4acOzbiBBanVzdGVzIHkgVmFsaWRhY2nDs24gZGUgcmVwb3J0ZXMiLCAiUHJveWVjdG8iOiAiQWN0dWFsaXphY2nDs24gMjMzMi8yMzUyIHkgUmVwb3J0ZXMiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiVGFyZWEiOiAiRmFzZSAzIC0gRW52aW8gYSBwcnVlYmFzIGNvbiBlbCBDbGllbnRlLiIsICJQcm95ZWN0byI6ICJBY3R1YWxpemFjacOzbiAyMzMyLzIzNTIgeSBSZXBvcnRlcyIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJGZWNoYSBJbmljaW8iOiAiIiwgIkZlY2hhIEZpbiI6ICIiLCAiSG9yYXMiOiAwLjAsICJMaXN0YSI6ICJTcHJpbnQgQlAifV19LCAiUkVZTkVSIE1Vw5FPWiBERSBQQVoiOiB7Im1vbnRobHlfaG91cnMiOiB7IjIwMjYtMDMiOiAwLjAsICIyMDI2LTA0IjogMC4wLCAiMjAyNi0wNSI6IDAuMCwgIjIwMjYtMDYiOiAwLjAsICIyMDI2LTA3IjogMC4wfSwgInByb2plY3RzIjoge30sICJzdGF0ZXMiOiB7ImJhY2tsb2ciOiAxfSwgInRhc2tzIjogW3siVGFyZWEiOiAiRW4gZXNwZXJhIGRlIGFkcXVpc2nDs24gZGVsIHNlcnZpZG9yIiwgIlByb3llY3RvIjogIlFDIFBsYXRmb3JtIENvbmNlc2nDs24iLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiRmVjaGEgSW5pY2lvIjogIiIsICJGZWNoYSBGaW4iOiAiIiwgIkhvcmFzIjogMC4wLCAiTGlzdGEiOiAiU3ByaW50IEJQIn1dfX0sICJwcm9qZWN0cyI6IFt7IlByb3llY3RvIjogIk1vZGlmaWNhciBCb3QgTWFudGVuaW1pZW50byBVVUNDIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDAsICJSZXNwb25zYWJsZXMiOiAiU2luIEFzaWduYXIiLCAiVG90YWwgVGFyZWFzIjogMSwgIlRhcmVhcyBDZXJyYWRhcyI6IDEsICJUYXJlYXMgU2luIEFzaWduYXIiOiAxLCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIlZhbGlkYWNpw7NuIExVTV9BSVJFIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDAsICJSZXNwb25zYWJsZXMiOiAiU2luIEFzaWduYXIiLCAiVG90YWwgVGFyZWFzIjogMSwgIlRhcmVhcyBDZXJyYWRhcyI6IDEsICJUYXJlYXMgU2luIEFzaWduYXIiOiAxLCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIlJlcG9ydGUgTHVtaW5hcmlhcyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJIb3JhcyBEZWRpY2FkYXMiOiAwLCAiUmVzcG9uc2FibGVzIjogIlNpbiBBc2lnbmFyIiwgIlRvdGFsIFRhcmVhcyI6IDEsICJUYXJlYXMgQ2VycmFkYXMiOiAxLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMSwgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJSZXBvcnRlIEJ1Y2sgVXAiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiSG9yYXMgRGVkaWNhZGFzIjogMCwgIlJlc3BvbnNhYmxlcyI6ICJTaW4gQXNpZ25hciIsICJUb3RhbCBUYXJlYXMiOiAxLCAiVGFyZWFzIENlcnJhZGFzIjogMSwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDEsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiUHJvY2VzbyBDb250YWN0IENlbnRlciIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJIb3JhcyBEZWRpY2FkYXMiOiAwLCAiUmVzcG9uc2FibGVzIjogIlNpbiBBc2lnbmFyIiwgIlRvdGFsIFRhcmVhcyI6IDEwLCAiVGFyZWFzIENlcnJhZGFzIjogMCwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDEwLCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIkF1ZGl0b3LDrWEgRm90b2dyw6FmaWNhIEVNU0EiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiSG9yYXMgRGVkaWNhZGFzIjogMCwgIlJlc3BvbnNhYmxlcyI6ICJTaW4gQXNpZ25hciIsICJUb3RhbCBUYXJlYXMiOiA3LCAiVGFyZWFzIENlcnJhZGFzIjogMCwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDcsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiUUMgUGxhdGZvcm0gQ29uY2VzacOzbiIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJIb3JhcyBEZWRpY2FkYXMiOiAwLCAiUmVzcG9uc2FibGVzIjogIkNSSVNUSUFOIFhBVklFUiBNT1JFTk8gUMOJUkVaLCBKVUxJRVRURSBLQVJPTElORSBSQUNFRE8gQ09Mw5NOLCBSRVlORVIgTVXDkU9aIERFIFBBWiIsICJUb3RhbCBUYXJlYXMiOiA2LCAiVGFyZWFzIENlcnJhZGFzIjogMCwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDEsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiRm9ybXVsYXJpbyBSRUNJQk8gVMOJQ05JQ08gKDgxMSkiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiSG9yYXMgRGVkaWNhZGFzIjogMCwgIlJlc3BvbnNhYmxlcyI6ICJTaW4gQXNpZ25hciIsICJUb3RhbCBUYXJlYXMiOiA1LCAiVGFyZWFzIENlcnJhZGFzIjogMCwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDUsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiUHJvY2VzbyBTVlIgQ2FydGVyYSIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJIb3JhcyBEZWRpY2FkYXMiOiAwLCAiUmVzcG9uc2FibGVzIjogIlNpbiBBc2lnbmFyIiwgIlRvdGFsIFRhcmVhcyI6IDEsICJUYXJlYXMgQ2VycmFkYXMiOiAwLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMSwgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJQcm9jZXNvIEx5UiIsICJFc3RhZG8iOiAiYmFja2xvZyIsICJIb3JhcyBEZWRpY2FkYXMiOiAwLCAiUmVzcG9uc2FibGVzIjogIlNpbiBBc2lnbmFyIiwgIlRvdGFsIFRhcmVhcyI6IDIsICJUYXJlYXMgQ2VycmFkYXMiOiAwLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMiwgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJTaXN0ZW1hIE9mZXJ0YXMgVMOpY25pY2FzIiwgIkVzdGFkbyI6ICJiYWNrbG9nIiwgIkhvcmFzIERlZGljYWRhcyI6IDAsICJSZXNwb25zYWJsZXMiOiAiU2luIEFzaWduYXIiLCAiVG90YWwgVGFyZWFzIjogMSwgIlRhcmVhcyBDZXJyYWRhcyI6IDAsICJUYXJlYXMgU2luIEFzaWduYXIiOiAxLCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIkdlbmVyYWNpw7NuIFBsYW50aWxsYXMiLCAiRXN0YWRvIjogImJhY2tsb2ciLCAiSG9yYXMgRGVkaWNhZGFzIjogMCwgIlJlc3BvbnNhYmxlcyI6ICJTaW4gQXNpZ25hciIsICJUb3RhbCBUYXJlYXMiOiAxLCAiVGFyZWFzIENlcnJhZGFzIjogMCwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDEsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiQXBsaWNhdGl2by9UYWJsZXJvIGRlIERCQSIsICJFc3RhZG8iOiAicHJ1ZWJhcyIsICJIb3JhcyBEZWRpY2FkYXMiOiAyMzMsICJSZXNwb25zYWJsZXMiOiAiQ1JJU1RJQU4gWEFWSUVSIE1PUkVOTyBQw4lSRVosIEpVTElFVFRFIEtBUk9MSU5FIFJBQ0VETyBDT0zDk04iLCAiVG90YWwgVGFyZWFzIjogNiwgIlRhcmVhcyBDZXJyYWRhcyI6IDQsICJUYXJlYXMgU2luIEFzaWduYXIiOiAwLCAiVGFyZWFzIEVuIEN1cnNvIjogMSwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMSwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIlJlcG9ydGUgQ29uc29saWRhZG8gUFFSICg4MTMpIiwgIkVzdGFkbyI6ICJlbiBjdXJzbyIsICJIb3JhcyBEZWRpY2FkYXMiOiAyMzksICJSZXNwb25zYWJsZXMiOiAiSlVMSUVUVEUgS0FST0xJTkUgUkFDRURPIENPTMOTTiIsICJUb3RhbCBUYXJlYXMiOiAxNywgIlRhcmVhcyBDZXJyYWRhcyI6IDAsICJUYXJlYXMgU2luIEFzaWduYXIiOiAxNiwgIlRhcmVhcyBFbiBDdXJzbyI6IDMsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJBdWRpdG9yw61hIEZvdG9ncsOhZmljYSBDZWxzaWEiLCAiRXN0YWRvIjogInBydWViYXMiLCAiSG9yYXMgRGVkaWNhZGFzIjogMzA0LjUsICJSZXNwb25zYWJsZXMiOiAiSlVMSUVUVEUgS0FST0xJTkUgUkFDRURPIENPTMOTTiIsICJUb3RhbCBUYXJlYXMiOiAxMywgIlRhcmVhcyBDZXJyYWRhcyI6IDExLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMSwgIlRhcmVhcyBFbiBDdXJzbyI6IDEsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDEsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJBdXRvbWF0aXphY2nDs24gTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiZW4gY3Vyc28iLCAiSG9yYXMgRGVkaWNhZGFzIjogMzA4LCAiUmVzcG9uc2FibGVzIjogIkNSSVNUSUFOIFhBVklFUiBNT1JFTk8gUMOJUkVaIiwgIlRvdGFsIFRhcmVhcyI6IDI1LCAiVGFyZWFzIENlcnJhZGFzIjogMTMsICJUYXJlYXMgU2luIEFzaWduYXIiOiAxNSwgIlRhcmVhcyBFbiBDdXJzbyI6IDIsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJPcHRpbWl6YWNpw7NuIENyb25vZ3JhbWEgRU1TQSIsICJFc3RhZG8iOiAiYmxvcXVlYWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDM0OS41LCAiUmVzcG9uc2FibGVzIjogIlJlbnpvIEdvbWV6IiwgIlRvdGFsIFRhcmVhcyI6IDE3LCAiVGFyZWFzIENlcnJhZGFzIjogOCwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDExLCAiVGFyZWFzIEVuIEN1cnNvIjogMywgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMSwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIkdlbmVyYWNpw7NuIFByZXN1cHVlc3RvcyBQbGFub3MgKDc0NSkiLCAiRXN0YWRvIjogInBydWViYXMiLCAiSG9yYXMgRGVkaWNhZGFzIjogNzQ1LjUsICJSZXNwb25zYWJsZXMiOiAiQ1JJU1RJQU4gWEFWSUVSIE1PUkVOTyBQw4lSRVoiLCAiVG90YWwgVGFyZWFzIjogMjIsICJUYXJlYXMgQ2VycmFkYXMiOiAyMCwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDAsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAxLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAxLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiUGFyYW1ldHJpemFjacOzbiBBdWRpdG9yw61hcyBMdXRlYyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJIb3JhcyBEZWRpY2FkYXMiOiAwLCAiUmVzcG9uc2FibGVzIjogIkNSSVNUSUFOIFhBVklFUiBNT1JFTk8gUMOJUkVaIiwgIlRvdGFsIFRhcmVhcyI6IDQsICJUYXJlYXMgQ2VycmFkYXMiOiAyLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMywgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJCb3QgTWFudGVuaW1pZW50byBGb3RvcyBTdXJ2ZXkgKDgwOCkiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiSG9yYXMgRGVkaWNhZGFzIjogMCwgIlJlc3BvbnNhYmxlcyI6ICJKVUxJRVRURSBLQVJPTElORSBSQUNFRE8gQ09Mw5NOIiwgIlRvdGFsIFRhcmVhcyI6IDEsICJUYXJlYXMgQ2VycmFkYXMiOiAxLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMCwgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJGaWx0cm8gQ29uc29saWRhZG8gQ2Vsc2lhICg3OTApIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDIzOSwgIlJlc3BvbnNhYmxlcyI6ICJDUklTVElBTiBYQVZJRVIgTU9SRU5PIFDDiVJFWiIsICJUb3RhbCBUYXJlYXMiOiAxLCAiVGFyZWFzIENlcnJhZGFzIjogMSwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDAsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiUmVwb3J0ZXMgTkMgTWFudGVuaW1pZW50byIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJIb3JhcyBEZWRpY2FkYXMiOiAxNzkuNSwgIlJlc3BvbnNhYmxlcyI6ICJDUklTVElBTiBYQVZJRVIgTU9SRU5PIFDDiVJFWiIsICJUb3RhbCBUYXJlYXMiOiAxLCAiVGFyZWFzIENlcnJhZGFzIjogMSwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDAsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiQWp1c3RlIDEzIFZpc3RhcyBNTFUgQWlyZSIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJIb3JhcyBEZWRpY2FkYXMiOiAxMzIsICJSZXNwb25zYWJsZXMiOiAiQ1JJU1RJQU4gWEFWSUVSIE1PUkVOTyBQw4lSRVosIFJlbnpvIEdvbWV6IiwgIlRvdGFsIFRhcmVhcyI6IDE1LCAiVGFyZWFzIENlcnJhZGFzIjogMTUsICJUYXJlYXMgU2luIEFzaWduYXIiOiA3LCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIlJlcG9ydGUgSW5zcGVjY2nDs24gSW5zdC4gRWzDqWN0cmljYXMiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiSG9yYXMgRGVkaWNhZGFzIjogMTksICJSZXNwb25zYWJsZXMiOiAiQ1JJU1RJQU4gWEFWSUVSIE1PUkVOTyBQw4lSRVoiLCAiVG90YWwgVGFyZWFzIjogMywgIlRhcmVhcyBDZXJyYWRhcyI6IDMsICJUYXJlYXMgU2luIEFzaWduYXIiOiAyLCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIkluZm9ybWUgVVVDQyBNYW50ZW5pbWllbnRvIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDE5LCAiUmVzcG9uc2FibGVzIjogIkNSSVNUSUFOIFhBVklFUiBNT1JFTk8gUMOJUkVaIiwgIlRvdGFsIFRhcmVhcyI6IDEsICJUYXJlYXMgQ2VycmFkYXMiOiAxLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMCwgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJDYXNvIFJlcG9ydGUgQ29uc29saWRhZG8gQ2Vsc2lhIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDE5LCAiUmVzcG9uc2FibGVzIjogIlJlbnpvIEdvbWV6IiwgIlRvdGFsIFRhcmVhcyI6IDEsICJUYXJlYXMgQ2VycmFkYXMiOiAxLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMCwgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDAsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJBZ3JlZ2FyIFVVQ0MgRm9ybWFwIE1vdmlsIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDAsICJSZXNwb25zYWJsZXMiOiAiUmVuem8gR29tZXoiLCAiVG90YWwgVGFyZWFzIjogNCwgIlRhcmVhcyBDZXJyYWRhcyI6IDQsICJUYXJlYXMgU2luIEFzaWduYXIiOiAzLCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIkFncmVnYXIgVVVDQyBGb3JtYXAgV0VCIiwgIkVzdGFkbyI6ICJmaW5hbGl6YWRvIiwgIkhvcmFzIERlZGljYWRhcyI6IDAsICJSZXNwb25zYWJsZXMiOiAiUmVuem8gR29tZXoiLCAiVG90YWwgVGFyZWFzIjogNCwgIlRhcmVhcyBDZXJyYWRhcyI6IDQsICJUYXJlYXMgU2luIEFzaWduYXIiOiAwLCAiVGFyZWFzIEVuIEN1cnNvIjogMCwgIlRhcmVhcyBFbiBQcnVlYmFzIjogMCwgIlRhcmVhcyBCbG9xdWVhZGFzIjogMCwgIkxpc3RhIjogIlNwcmludCBCUCJ9LCB7IlByb3llY3RvIjogIkFqdXN0ZSBCb3QgQ0UiLCAiRXN0YWRvIjogImZpbmFsaXphZG8iLCAiSG9yYXMgRGVkaWNhZGFzIjogMzQuNSwgIlJlc3BvbnNhYmxlcyI6ICJDUklTVElBTiBYQVZJRVIgTU9SRU5PIFDDiVJFWiIsICJUb3RhbCBUYXJlYXMiOiAxLCAiVGFyZWFzIENlcnJhZGFzIjogMSwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDAsICJUYXJlYXMgRW4gQ3Vyc28iOiAwLCAiVGFyZWFzIEVuIFBydWViYXMiOiAwLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiU3ByaW50IEJQIn0sIHsiUHJveWVjdG8iOiAiQWN0dWFsaXphY2nDs24gMjMzMi8yMzUyIHkgUmVwb3J0ZXMiLCAiRXN0YWRvIjogInBydWViYXMiLCAiSG9yYXMgRGVkaWNhZGFzIjogOS41LCAiUmVzcG9uc2FibGVzIjogIkNSSVNUSUFOIFhBVklFUiBNT1JFTk8gUMOJUkVaIiwgIlRvdGFsIFRhcmVhcyI6IDQsICJUYXJlYXMgQ2VycmFkYXMiOiAwLCAiVGFyZWFzIFNpbiBBc2lnbmFyIjogMywgIlRhcmVhcyBFbiBDdXJzbyI6IDAsICJUYXJlYXMgRW4gUHJ1ZWJhcyI6IDEsICJUYXJlYXMgQmxvcXVlYWRhcyI6IDAsICJMaXN0YSI6ICJTcHJpbnQgQlAifSwgeyJQcm95ZWN0byI6ICJJTkNJREVOQ0lBUyIsICJFc3RhZG8iOiAiZmluYWxpemFkbyIsICJIb3JhcyBEZWRpY2FkYXMiOiAxMDQuNSwgIlJlc3BvbnNhYmxlcyI6ICJDUklTVElBTiBYQVZJRVIgTU9SRU5PIFDDiVJFWiwgSlVMSUVUVEUgS0FST0xJTkUgUkFDRURPIENPTMOTTiIsICJUb3RhbCBUYXJlYXMiOiA4LCAiVGFyZWFzIENlcnJhZGFzIjogNSwgIlRhcmVhcyBTaW4gQXNpZ25hciI6IDEsICJUYXJlYXMgRW4gQ3Vyc28iOiAxLCAiVGFyZWFzIEVuIFBydWViYXMiOiAxLCAiVGFyZWFzIEJsb3F1ZWFkYXMiOiAwLCAiTGlzdGEiOiAiSU5DSURFTkNJQVMifV0sICJob2xpZGF5cyI6IFsiMjAyNi0xMS0xNiIsICIyMDI2LTAzLTIzIiwgIjIwMjYtMDUtMTgiLCAiMjAyNi0wNy0xMyIsICIyMDI2LTExLTAyIiwgIjIwMjYtMDEtMTIiLCAiMjAyNi0wNy0yMCIsICIyMDI2LTEwLTEyIiwgIjIwMjYtMTItMDgiLCAiMjAyNi0wOC0wNyIsICIyMDI2LTA0LTAyIiwgIjIwMjYtMDUtMDEiLCAiMjAyNi0wNi0wOCIsICIyMDI2LTEyLTI1IiwgIjIwMjYtMDYtMjkiLCAiMjAyNi0wOC0xNyIsICIyMDI2LTAxLTAxIiwgIjIwMjYtMDQtMDMiLCAiMjAyNi0wNi0xNSJdLCAic3ByaW50cyI6IFsiSU5DSURFTkNJQVMiLCAiU3ByaW50IEJQIl0sICJhbGVydHMiOiBbeyJQcm95ZWN0byI6ICJSZXBvcnRlIENvbnNvbGlkYWRvIFBRUiAoODEzKSIsICJUYXJlYSI6ICJBcnF1aXRlY3R1cmEgQmFzZSBWaWFiaWxpZGFkIFTDqWNuaWNhIHkgUmVxdWVyaW1pZW50b3MiLCAiRXN0YWRvQW50ZXJpb3IiOiAiRU4gQ1VSU08iLCAiRXN0YWRvQWN0dWFsIjogIkVOIENVUlNPIiwgIkZlY2hhRmluQW50ZXJpb3IiOiAiNy8wNy8yMDI2IiwgIkZlY2hhRmluQWN0dWFsIjogIjgvMDcvMjAyNiIsICJDb3J0ZUFudGVyaW9yIjogIkp1bCA3ICgxMjo1OSkiLCAiQ29ydGVBY3R1YWwiOiAiSnVsIDggKDA5OjI4KSIsICJEZXN2aWFjaW9uIjogIisxIGTDrWFzIn0sIHsiUHJveWVjdG8iOiAiSU5DSURFTkNJQVMiLCAiVGFyZWEiOiAiTm8gZGVzY2FyZ2EgZGVsIFBERiAtIE10dG8gVmFsbGUiLCAiRXN0YWRvQW50ZXJpb3IiOiAiRU4gQ1VSU08iLCAiRXN0YWRvQWN0dWFsIjogIkVOIENVUlNPIiwgIkZlY2hhRmluQW50ZXJpb3IiOiAiNy8wNy8yMDI2IiwgIkZlY2hhRmluQWN0dWFsIjogIjgvMDcvMjAyNiIsICJDb3J0ZUFudGVyaW9yIjogIkp1bCA3ICgxMjo1OSkiLCAiQ29ydGVBY3R1YWwiOiAiSnVsIDggKDA5OjI4KSIsICJEZXN2aWFjaW9uIjogIisxIGTDrWFzIn1dLCAiY29ydGVzX2NvdW50IjogMn0=";
+
+        function decodeBase64UTF8(base64Str) {
+            const binaryString = atob(base64Str);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            if (typeof TextDecoder !== 'undefined') {
+                const decoder = new TextDecoder('utf-8');
+                return decoder.decode(bytes);
+            } else {
+                try {
+                    const percentEncodedStr = Array.from(binaryString)
+                        .map(char => '%' + ('00' + char.charCodeAt(0).toString(16)).slice(-2))
+                        .join('');
+                    return decodeURIComponent(percentEncodedStr);
+                } catch (e) { return binaryString; }
+            }
+        }
+
+        let data = {};
+        try {
+            data = JSON.parse(decodeBase64UTF8(dataB64));
+        } catch (e) { console.error("Error al parsear los datos inyectados:", e); }
+
+        let currentCharts = {};
+        
+        function checkChartJSAvaliable() {
+            return typeof Chart !== 'undefined';
+        }
+
+        // Controles de Dropdown de Colaboradores
+        function toggleColabDropdown(event) {
+            event.stopPropagation();
+            const container = document.getElementById('colab-dropdown-container');
+            container.classList.toggle('open');
+        }
+
+        // Controles de Dropdown de Sprints
+        function toggleSprintDropdown(event) {
+            event.stopPropagation();
+            const container = document.getElementById('sprint-dropdown-container');
+            container.classList.toggle('open');
+        }
+
+        document.addEventListener('click', function(e) {
+            const colabContainer = document.getElementById('colab-dropdown-container');
+            if (colabContainer && !colabContainer.contains(e.target)) {
+                colabContainer.classList.remove('open');
+            }
+            const sprintContainer = document.getElementById('sprint-dropdown-container');
+            if (sprintContainer && !sprintContainer.contains(e.target)) {
+                sprintContainer.classList.remove('open');
+            }
+        });
+
+        window.onload = function() {
+            if (!checkChartJSAvaliable()) {
+                document.getElementById('cdn-alert').style.display = 'block';
+            }
+            try { initSprintsTab(); } catch (e) { console.error(e); }
+            try { initColaboradoresTab(); } catch (e) { console.error(e); }
+            try { initProyectosTab(); } catch (e) { console.error(e); }
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            if (tabId === 'colaboradores') {
+                document.querySelector('.tab-btn[onclick="switchTab(\'colaboradores\')"]').classList.add('active');
+                document.getElementById('tab-colaboradores').classList.add('active');
+            } else if (tabId === 'proyectos') {
+                document.querySelector('.tab-btn[onclick="switchTab(\'proyectos\')"]').classList.add('active');
+                document.getElementById('tab-proyectos').classList.add('active');
+            } else if (tabId === 'alertas') {
+                document.querySelector('.tab-btn[onclick="switchTab(\'alertas\')"]').classList.add('active');
+                document.getElementById('tab-alertas').classList.add('active');
+                try { initAlertsTab(); } catch (e) { console.error(e); }
+            }
+        }
+
+        function initColaboradoresTab() {
+            const listContainer = document.getElementById('colaboradores-list');
+            listContainer.innerHTML = '';
+            if (!data || !data.people) return;
+
+            const people = Object.keys(data.people).sort((a, b) => {
+                const keyA = a.toLowerCase();
+                const keyB = b.toLowerCase();
+                if (keyA.includes("juliette") || keyA.includes("cristian")) return -1;
+                if (keyB.includes("juliette") || keyB.includes("cristian")) return 1;
+                return a.localeCompare(b);
+            });
+
+            const liAll = document.createElement('li');
+            liAll.className = 'item';
+            liAll.innerHTML = `
+                <input type="checkbox" id="colab-select-all" onchange="toggleSelectAllColabs(this.checked)">
+                <span class="item-text" style="font-weight: 700;">[Seleccionar Todos]</span>
+            `;
+            listContainer.appendChild(liAll);
+
+            people.forEach(person => {
+                const li = document.createElement('li');
+                li.className = 'item';
+                li.innerHTML = `
+                    <input type="checkbox" class="colab-checkbox" value="${person}" onchange="onColabCheckboxChange()">
+                    <span class="item-text">${person}</span>
+                `;
+                listContainer.appendChild(li);
+            });
+
+            const checkboxes = document.querySelectorAll('.colab-checkbox');
+            checkboxes.forEach(cb => {
+                const valLower = cb.value.toLowerCase();
+                if (valLower.includes("juliette") || valLower.includes("cristian")) { cb.checked = true; }
+            });
+            onColabCheckboxChange();
+        }
+
+        function toggleSelectAllColabs(isChecked) {
+            const checkboxes = document.querySelectorAll('.colab-checkbox');
+            checkboxes.forEach(cb => cb.checked = isChecked);
+            onColabCheckboxChange();
+        }
+
+        function onColabCheckboxChange() {
+            const checkboxes = document.querySelectorAll('.colab-checkbox');
+            const selectAllCb = document.getElementById('colab-select-all');
+            const total = checkboxes.length;
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            if (selectAllCb) {
+                selectAllCb.checked = (total === checkedCount);
+                selectAllCb.indeterminate = (checkedCount > 0 && checkedCount < total);
+            }
+            updateSelectedColabsText(checkedCount, total);
+            updateDashboard();
+        }
+
+        function updateSelectedColabsText(checkedCount, total) {
+            const btnText = document.getElementById('selected-colabs-text');
+            if (checkedCount === 0) { btnText.textContent = "Seleccionar Colaborador(es)"; }
+            else if (checkedCount === total) { btnText.textContent = "Todos los Colaboradores"; }
+            else if (checkedCount === 1) {
+                const checkedCb = document.querySelector('.colab-checkbox:checked');
+                btnText.textContent = checkedCb.value;
+            } else { btnText.textContent = `${checkedCount} Colaboradores Seleccionados`; }
+        }
+
+        function initSprintsTab() {
+            const listContainer = document.getElementById('sprints-list');
+            listContainer.innerHTML = '';
+            if (!data || !data.sprints) return;
+
+            const sprints = data.sprints;
+
+            const liAll = document.createElement('li');
+            liAll.className = 'item';
+            liAll.innerHTML = `
+                <input type="checkbox" id="sprint-select-all" onchange="toggleSelectAllSprints(this.checked)">
+                <span class="item-text" style="font-weight: 700;">[Seleccionar Todos]</span>
+            `;
+            listContainer.appendChild(liAll);
+
+            sprints.forEach(sprint => {
+                const li = document.createElement('li');
+                li.className = 'item';
+                li.innerHTML = `
+                    <input type="checkbox" class="sprint-checkbox" value="${sprint}" onchange="onSprintCheckboxChange()" checked>
+                    <span class="item-text">${sprint}</span>
+                `;
+                listContainer.appendChild(li);
+            });
+
+            onSprintCheckboxChange();
+        }
+
+        function toggleSelectAllSprints(isChecked) {
+            const checkboxes = document.querySelectorAll('.sprint-checkbox');
+            checkboxes.forEach(cb => cb.checked = isChecked);
+            onSprintCheckboxChange();
+        }
+
+        function onSprintCheckboxChange() {
+            const checkboxes = document.querySelectorAll('.sprint-checkbox');
+            const selectAllCb = document.getElementById('sprint-select-all');
+            const total = checkboxes.length;
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            if (selectAllCb) {
+                selectAllCb.checked = (total === checkedCount);
+                selectAllCb.indeterminate = (checkedCount > 0 && checkedCount < total);
+            }
+            updateSelectedSprintsText(checkedCount, total);
+            updateDashboard();
+        }
+
+        function updateSelectedSprintsText(checkedCount, total) {
+            const btnText = document.getElementById('selected-sprints-text');
+            if (checkedCount === 0) { btnText.textContent = "Seleccionar Sprint(s)"; }
+            else if (checkedCount === total) { btnText.textContent = "Todos los Sprints"; }
+            else if (checkedCount === 1) {
+                const checkedCb = document.querySelector('.sprint-checkbox:checked');
+                btnText.textContent = checkedCb.value;
+            } else { btnText.textContent = `${checkedCount} Sprints Seleccionados`; }
+        }
+
+        function parseDateJS(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return null;
+            return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+        }
+
+        function getDayHoursJS(dateStr, holidays) {
+            const d = new Date(dateStr + 'T00:00:00');
+            if (isNaN(d.getTime()) || holidays.includes(dateStr)) return 0;
+            const day = d.getDay();
+            if (day === 0 || day === 6) return 0;
+            return (day === 5) ? 6.0 : 9.5;
+        }
+
+        function calculateTaskHoursInRange(startStr, endStr, filterStartStr, filterEndStr, holidays) {
+            if (!startStr || !endStr) return 0;
+            const taskStart = parseDateJS(startStr);
+            const taskEnd = parseDateJS(endStr);
+            if (!taskStart || !taskEnd) return 0;
+            let effStart = taskStart;
+            if (filterStartStr) {
+                const fStart = new Date(filterStartStr + 'T00:00:00');
+                if (fStart > effStart) effStart = fStart;
+            }
+            let effEnd = taskEnd;
+            if (filterEndStr) {
+                const fEnd = new Date(filterEndStr + 'T00:00:00');
+                if (fEnd < effEnd) effEnd = fEnd;
+            }
+            if (effStart > effEnd) return 0;
+            let hours = 0;
+            let curr = new Date(effStart);
+            while (curr <= effEnd) {
+                hours += getDayHoursJS(curr.toISOString().split('T')[0], holidays);
+                curr.setDate(curr.getDate() + 1);
+            }
+            return hours;
+        }
+
+        function distributeTaskHoursByMonthInRange(startStr, endStr, filterStartStr, filterEndStr, holidays) {
+            const dist = {};
+            if (!startStr || !endStr) return dist;
+            const taskStart = parseDateJS(startStr);
+            const taskEnd = parseDateJS(endStr);
+            if (!taskStart || !taskEnd) return dist;
+            let effStart = taskStart;
+            if (filterStartStr) {
+                const fStart = new Date(filterStartStr + 'T00:00:00');
+                if (fStart > effStart) effStart = fStart;
+            }
+            let effEnd = taskEnd;
+            if (filterEndStr) {
+                const fEnd = new Date(filterEndStr + 'T00:00:00');
+                if (fEnd < effEnd) effEnd = fEnd;
+            }
+            if (effStart > effEnd) return dist;
+            let curr = new Date(effStart);
+            while (curr <= effEnd) {
+                const dateKey = curr.toISOString().split('T')[0];
+                const h = getDayHoursJS(dateKey, holidays);
+                if (h > 0) {
+                    const mKey = dateKey.substring(0, 7);
+                    dist[mKey] = (dist[mKey] || 0) + h;
+                }
+                curr.setDate(curr.getDate() + 1);
+            }
+            return dist;
+        }
+
+        function clearDashboard() {
+            document.getElementById('kpi-total-hours').textContent = '0';
+            document.getElementById('kpi-avg-occupancy').textContent = '0%';
+            document.getElementById('kpi-total-tasks').textContent = '0';
+            document.getElementById('kpi-closed-tasks').textContent = '0';
+            document.getElementById('tasks-tbody').innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">Selecciona al menos un colaborador y un sprint.</td></tr>';
+            if (currentCharts.occupancy) currentCharts.occupancy.destroy();
+            if (currentCharts.people) currentCharts.people.destroy();
+            if (currentCharts.projects) currentCharts.projects.destroy();
+            if (currentCharts.states) currentCharts.states.destroy();
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-start-date').value = '';
+            document.getElementById('filter-end-date').value = '';
+            
+            // Reestablecer Sprints
+            const sprintCbs = document.querySelectorAll('.sprint-checkbox');
+            sprintCbs.forEach(cb => cb.checked = true);
+            const selectAllSprint = document.getElementById('sprint-select-all');
+            if (selectAllSprint) { selectAllSprint.checked = true; selectAllSprint.indeterminate = false; }
+            updateSelectedSprintsText(sprintCbs.length, sprintCbs.length);
+            
+            // Reestablecer colaboradores
+            const colabCbs = document.querySelectorAll('.colab-checkbox');
+            colabCbs.forEach(cb => {
+                const valLower = cb.value.toLowerCase();
+                cb.checked = (valLower.includes("juliette") || valLower.includes("cristian"));
+            });
+            const selectAllColab = document.getElementById('colab-select-all');
+            if (selectAllColab) { selectAllColab.checked = false; selectAllColab.indeterminate = true; }
+            const checkedColabs = Array.from(colabCbs).filter(cb => cb.checked).length;
+            updateSelectedColabsText(checkedColabs, colabCbs.length);
+            
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            const selectedPeople = Array.from(document.querySelectorAll('.colab-checkbox:checked')).map(cb => cb.value);
+            const selectedSprints = Array.from(document.querySelectorAll('.sprint-checkbox:checked')).map(cb => cb.value);
+            
+            if (selectedPeople.length === 0 || selectedSprints.length === 0) { clearDashboard(); return; }
+            const filterStart = document.getElementById('filter-start-date').value;
+            const filterEnd = document.getElementById('filter-end-date').value;
+            const capacityMonths = Object.keys(data.capacity);
+            const consolidatedMonthlyHours = {};
+            capacityMonths.forEach(m => consolidatedMonthlyHours[m] = 0);
+            const consolidatedProjects = {};
+            const consolidatedStates = {};
+            const uniqueTasksMap = new Map();
+
+            selectedPeople.forEach(person => {
+                const personData = data.people[person];
+                if (!personData) return;
+                personData.tasks.forEach(t => {
+                    // Filtrar por Sprint
+                    const taskSprint = t.Lista || "Sin Sprint";
+                    if (!selectedSprints.includes(taskSprint)) return;
+
+                    const isClosed = ['realizado', 'finalizado', 'completed'].includes(t.Estado.toLowerCase().trim());
+                    let activeHours = t.Horas || 0;
+                    if (filterStart || filterEnd) {
+                        if (t['Fecha Inicio'] && t['Fecha Fin']) {
+                            activeHours = calculateTaskHoursInRange(t['Fecha Inicio'], t['Fecha Fin'], filterStart, filterEnd, data.holidays);
+                            if (activeHours === 0) return;
+                        } else return;
+                    }
+                    const taskKey = `${t.Tarea}||${t.Proyecto}`;
+                    if (!uniqueTasksMap.has(taskKey)) {
+                        uniqueTasksMap.set(taskKey, { ...t, Horas: activeHours, Responsables: new Set([person]) });
+                    } else { uniqueTasksMap.get(taskKey).Responsables.add(person); }
+                    consolidatedStates[t.Estado] = (consolidatedStates[t.Estado] || 0) + 1;
+                    if (isClosed) {
+                        const monthlyDist = distributeTaskHoursByMonthInRange(t['Fecha Inicio'], t['Fecha Fin'], filterStart, filterEnd, data.holidays);
+                        for (const m_key in monthlyDist) {
+                            if (m_key in consolidatedMonthlyHours) consolidatedMonthlyHours[m_key] += monthlyDist[m_key];
+                        }
+                        consolidatedProjects[t.Proyecto] = (consolidatedProjects[t.Proyecto] || 0) + activeHours;
+                    }
+                });
+            });
+
+            const consolidatedTasksList = Array.from(uniqueTasksMap.values()).map(t => ({ ...t, Responsable: Array.from(t.Responsables).join(', ') }));
+            const totalWorkedHours = Object.values(consolidatedMonthlyHours).reduce((a, b) => a + b, 0);
+            document.getElementById('kpi-total-hours').textContent = totalWorkedHours.toFixed(1);
+
+            let totalPeriodCapacity = 0;
+            const numPeople = selectedPeople.length;
+            if (filterStart && filterEnd) {
+                let curr = new Date(filterStart);
+                const end = new Date(filterEnd);
+                let singleCapacity = 0;
+                while (curr <= end) {
+                    singleCapacity += getDayHoursJS(curr.toISOString().split('T')[0], data.holidays);
+                    curr.setDate(curr.getDate() + 1);
+                }
+                totalPeriodCapacity = singleCapacity * numPeople;
+            } else {
+                totalPeriodCapacity = Object.values(data.capacity).reduce((a, b) => a + b, 0) * numPeople;
+            }
+            document.getElementById('kpi-avg-occupancy').textContent = (totalPeriodCapacity > 0 ? (totalWorkedHours / totalPeriodCapacity) * 100 : 0).toFixed(1) + '%';
+            document.getElementById('kpi-total-tasks').textContent = consolidatedTasksList.length;
+            document.getElementById('kpi-closed-tasks').textContent = consolidatedTasksList.filter(t => ['realizado', 'finalizado', 'completed'].includes(t.Estado.toLowerCase().trim())).length;
+            loadTasksTableConsolidated(consolidatedTasksList);
+            if (checkChartJSAvaliable()) renderConsolidatedCharts(consolidatedMonthlyHours, consolidatedProjects, consolidatedStates);
+        }
+
+        function loadTasksTableConsolidated(tasksList) {
+            const tbody = document.getElementById('tasks-tbody');
+            tbody.innerHTML = tasksList.length === 0 ? '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No se encontraron tareas en el rango seleccionado.</td></tr>' : '';
+            tasksList.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${t.Tarea}</td><td>${t.Proyecto}</td><td><span style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">${t.Lista || 'Sin Sprint'}</span></td><td><span class="badge badge-${t.Estado.toLowerCase().trim().replace(/\s+/g, '-')}">${t.Estado}</span></td><td style="text-align: center;">${t['Fecha Inicio'] || 'N/A'}</td><td style="text-align: center;">${t['Fecha Fin'] || 'N/A'}</td><td style="font-size: 0.85rem; color: var(--text-secondary);">${t.Responsable}</td><td style="font-weight: 600;">${parseFloat(t.Horas).toFixed(1)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTasks() {
+            const query = document.getElementById('task-search').value.toLowerCase();
+            document.querySelectorAll('#tasks-tbody tr').forEach(row => row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none');
+        }
+
+        function calculateCapacityForMonthInRange(mKey, filterStartStr, filterEndStr, holidays) {
+            const parts = mKey.split('-');
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            
+            const monthStart = new Date(year, month, 1);
+            const monthEnd = new Date(year, month + 1, 0);
+            
+            let effStart = monthStart;
+            if (filterStartStr) {
+                const fStart = new Date(filterStartStr + 'T00:00:00');
+                if (fStart > effStart) effStart = fStart;
+            }
+            let effEnd = monthEnd;
+            if (filterEndStr) {
+                const fEnd = new Date(filterEndStr + 'T00:00:00');
+                if (fEnd < effEnd) effEnd = fEnd;
+            }
+            
+            if (effStart > effEnd) return 0;
+            
+            let capacityHours = 0;
+            let curr = new Date(effStart);
+            while (curr <= effEnd) {
+                const dateKey = curr.toISOString().split('T')[0];
+                capacityHours += getDayHoursJS(dateKey, holidays);
+                curr.setDate(curr.getDate() + 1);
+            }
+            return capacityHours;
+        }
+
+        function renderConsolidatedCharts(monthlyHours, projectsHours, statesCount) {
+            if (!checkChartJSAvaliable()) return;
+            try {
+                if (currentCharts.occupancy) currentCharts.occupancy.destroy();
+                if (currentCharts.people) currentCharts.people.destroy();
+                if (currentCharts.projects) currentCharts.projects.destroy();
+                if (currentCharts.states) currentCharts.states.destroy();
+                
+                const selectedPeople = Array.from(document.querySelectorAll('.colab-checkbox:checked')).map(cb => cb.value);
+                const selectedSprints = Array.from(document.querySelectorAll('.sprint-checkbox:checked')).map(cb => cb.value);
+                const numPeople = selectedPeople.length;
+                const months = Object.keys(data.capacity);
+                
+                const filterStart = document.getElementById('filter-start-date').value;
+                const filterEnd = document.getElementById('filter-end-date').value;
+                
+                // --- 1. DATOS GRÁFICO MENSUAL ---
+                const capacityData = months.map(m => {
+                    const singleCap = calculateCapacityForMonthInRange(m, filterStart, filterEnd, data.holidays);
+                    return singleCap * numPeople;
+                });
+                const realHoursData = months.map(m => monthlyHours[m] || 0);
+                
+                // Generar tabla de estadísticas dinámicas mensuales
+                let statsHtml = `
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; margin-top: 0.5rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
+                                <th style="padding: 4px; text-align: left; font-weight: 600;">Mes</th>
+                                <th style="padding: 4px; font-weight: 600;">Reales</th>
+                                <th style="padding: 4px; font-weight: 600;">Capacidad</th>
+                                <th style="padding: 4px; font-weight: 600;">% Ocupación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                months.forEach((m, idx) => {
+                    const cap = capacityData[idx];
+                    const real = realHoursData[idx];
+                    const pct = cap > 0 ? ((real / cap) * 100).toFixed(1) + '%' : '0%';
+                    statsHtml += `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 4px; text-align: left; font-weight: 600; color: var(--text-primary);">${m}</td>
+                            <td style="padding: 4px; color: var(--accent-purple); font-weight: 600;">${real.toFixed(1)} h</td>
+                            <td style="padding: 4px; color: var(--accent-blue);">${cap.toFixed(1)} h</td>
+                            <td style="padding: 4px; font-weight: 700; color: ${real > cap ? 'var(--accent-rose)' : 'var(--accent-emerald)'};">${pct}</td>
+                        </tr>
+                    `;
+                });
+                statsHtml += '</tbody></table>';
+                document.getElementById('occupancy-stats-table').innerHTML = statsHtml;
+                
+                // Gráfico A: Ocupación Mensual
+                currentCharts.occupancy = new Chart(document.getElementById('chart-occupancy').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: months.map(m => m),
+                        datasets: [
+                            {
+                                label: 'Capacidad Teórica',
+                                data: capacityData,
+                                backgroundColor: 'rgba(59, 130, 246, 0.4)'
+                            },
+                            {
+                                label: 'Horas Reales',
+                                data: realHoursData,
+                                backgroundColor: 'rgba(168, 85, 247, 0.7)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const datasetLabel = context.dataset.label || '';
+                                        const rawValue = context.raw || 0;
+                                        const idx = context.dataIndex;
+                                        const capVal = capacityData[idx] || 0;
+                                        const percent = capVal > 0 ? ((rawValue / capVal) * 100).toFixed(1) + '%' : '0%';
+                                        if (context.datasetIndex === 0) {
+                                            return `${datasetLabel}: ${rawValue.toFixed(1)} h`;
+                                        } else {
+                                            return `${datasetLabel}: ${rawValue.toFixed(1)} h (${percent} ocupación)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // --- 2. DATOS GRÁFICO POR COLABORADOR (BARRAS HORIZONTALES) ---
+                const colabLabels = [];
+                const colabCapacityData = [];
+                const colabRealHoursData = [];
+                
+                selectedPeople.forEach(person => {
+                    colabLabels.push(person);
+                    
+                    // Calcular capacidad individual del colaborador en el rango de fechas
+                    let personCapacity = 0;
+                    if (filterStart && filterEnd) {
+                        let curr = new Date(filterStart + 'T00:00:00');
+                        const end = new Date(filterEnd + 'T00:00:00');
+                        while (curr <= end) {
+                            personCapacity += getDayHoursJS(curr.toISOString().split('T')[0], data.holidays);
+                            curr.setDate(curr.getDate() + 1);
+                        }
+                    } else {
+                        // Si no hay filtro, la capacidad total de los 5 meses
+                        personCapacity = Object.values(data.capacity).reduce((a, b) => a + b, 0);
+                    }
+                    colabCapacityData.push(personCapacity);
+                    
+                    // Calcular horas reales individuales (tareas finalizadas del sprint)
+                    let personReal = 0;
+                    const personData = data.people[person];
+                    if (personData) {
+                        personData.tasks.forEach(t => {
+                            const taskSprint = t.Lista || "Sin Sprint";
+                            if (!selectedSprints.includes(taskSprint)) return;
+                            
+                            const isClosed = ['realizado', 'finalizado', 'completed'].includes(t.Estado.toLowerCase().trim());
+                            if (isClosed) {
+                                let activeHours = t.Horas || 0;
+                                if (filterStart || filterEnd) {
+                                    if (t['Fecha Inicio'] && t['Fecha Fin']) {
+                                        activeHours = calculateTaskHoursInRange(t['Fecha Inicio'], t['Fecha Fin'], filterStart, filterEnd, data.holidays);
+                                    } else activeHours = 0;
+                                }
+                                personReal += activeHours;
+                            }
+                        });
+                    }
+                    colabRealHoursData.push(personReal);
+                });
+                
+                // Gráfico B: Capacidad vs. Horas por Colaborador
+                currentCharts.people = new Chart(document.getElementById('chart-people').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: colabLabels,
+                        datasets: [
+                            {
+                                label: 'Capacidad Teórica',
+                                data: colabCapacityData,
+                                backgroundColor: 'rgba(59, 130, 246, 0.4)'
+                            },
+                            {
+                                label: 'Horas Reales',
+                                data: colabRealHoursData,
+                                backgroundColor: 'rgba(168, 85, 247, 0.7)'
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y', // Convertir en barras horizontales
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const datasetLabel = context.dataset.label || '';
+                                        const rawValue = context.raw || 0;
+                                        const idx = context.dataIndex;
+                                        const capVal = colabCapacityData[idx] || 0;
+                                        const percent = capVal > 0 ? ((rawValue / capVal) * 100).toFixed(1) + '%' : '0%';
+                                        if (context.datasetIndex === 0) {
+                                            return `${datasetLabel}: ${rawValue.toFixed(1)} h`;
+                                        } else {
+                                            return `${datasetLabel}: ${rawValue.toFixed(1)} h (${percent} ocupación)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // --- 3. GRÁFICOS RESTANTES (PROYECTOS Y ESTADOS) ---
+                currentCharts.projects = new Chart(document.getElementById('chart-projects-pie').getContext('2d'), {
+                    type: 'doughnut',
+                    data: { labels: Object.keys(projectsHours), datasets: [{ data: Object.values(projectsHours), backgroundColor: ['#3b82f6', '#a855f7', '#10b981', '#f59e0b', '#f43f5e'] }] }
+                });
+
+                currentCharts.states = new Chart(document.getElementById('chart-states-pie').getContext('2d'), {
+                    type: 'pie',
+                    data: { labels: Object.keys(statesCount), datasets: [{ data: Object.values(statesCount), backgroundColor: ['#10b981', '#3b82f6', '#64748b'] }] }
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function initProyectosTab() {
+            if (!data || !data.projects) return;
+            const projects = data.projects;
+            
+            // Contadores de Proyectos por Estado
+            const totalProj = projects.length;
+            const finishedProj = projects.filter(p => ['realizado', 'finalizado', 'completed'].includes(p.Estado.toLowerCase().trim())).length;
+            const inProgressProj = projects.filter(p => ['en curso', 'curso'].includes(p.Estado.toLowerCase().trim())).length;
+            const backlogProj = projects.filter(p => ['backlog', 'to do'].includes(p.Estado.toLowerCase().trim())).length;
+            const blockedProj = projects.filter(p => ['bloqueado'].includes(p.Estado.toLowerCase().trim())).length;
+            
+            // Asignar KPIs
+            document.getElementById('kpi-proj-total').textContent = totalProj;
+            document.getElementById('kpi-proj-finished').textContent = finishedProj;
+            document.getElementById('kpi-proj-inprogress').textContent = inProgressProj;
+            document.getElementById('kpi-proj-backlog').textContent = backlogProj;
+            document.getElementById('kpi-proj-blocked').textContent = blockedProj;
+            
+            document.getElementById('kpi-proj-hours').textContent = projects.reduce((a, b) => a + parseFloat(b['Horas Dedicadas'] || 0), 0).toFixed(1);
+            document.getElementById('kpi-proj-tasks').textContent = projects.reduce((a, b) => a + parseInt(b['Total Tareas'] || 0), 0);
+            document.getElementById('kpi-proj-unassigned').textContent = projects.reduce((a, b) => a + parseInt(b['Tareas Sin Asignar'] || 0), 0);
+            loadProjectsTable(projects);
+        }
+
+        function loadProjectsTable(projectsList) {
+            const tbody = document.getElementById('projects-tbody');
+            tbody.innerHTML = '';
+            projectsList.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td style="font-weight: 600;">${p.Proyecto}</td><td><span style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">${p.Lista || 'Sin Sprint'}</span></td><td><span class="badge badge-${p.Estado.toLowerCase().trim().replace(/\s+/g, '-')}">${p.Estado}</span></td><td>${parseFloat(p['Horas Dedicadas']).toFixed(1)}</td><td>${p.Responsables}</td><td>${p['Total Tareas']}</td><td>${p['Tareas Cerradas']}</td><td>${p['Tareas Sin Asignar']}</td><td>${p['Tareas En Curso'] || 0}</td><td>${p['Tareas En Pruebas'] || 0}</td><td>${p['Tareas Bloqueadas'] || 0}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterProjects() {
+            const query = document.getElementById('project-search').value.toLowerCase();
+            document.querySelectorAll('#projects-tbody tr').forEach(row => row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none');
+        }
+
+        function initAlertsTab() {
+            const alertsList = data.alerts || [];
+            document.getElementById('kpi-alertas-total').textContent = alertsList.length;
+            document.getElementById('kpi-alertas-cortes').textContent = data.cortes_count || 0;
+            
+            const tbody = document.getElementById('alertas-tbody');
+            tbody.innerHTML = '';
+            if (alertsList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-secondary); padding: 1.5rem;">No se detectaron modificaciones en fechas de fin de tareas entre los cortes históricos.</td></tr>';
+                return;
+            }
+            
+            alertsList.forEach(a => {
+                const tr = document.createElement('tr');
+                const isDelay = a.Desviacion.startsWith('+');
+                const badgeColor = isDelay ? 'var(--accent-rose)' : 'var(--accent-emerald)';
+                
+                tr.innerHTML = `
+                    <td style="font-weight: 600;">${a.Tarea}</td>
+                    <td>${a.Proyecto}</td>
+                    <td><span class="badge badge-${a.EstadoAnterior.toLowerCase().trim().replace(/\s+/g, '-')}">${a.EstadoAnterior}</span></td>
+                    <td><span class="badge badge-${a.EstadoActual.toLowerCase().trim().replace(/\s+/g, '-')}">${a.EstadoActual}</span></td>
+                    <td style="color: var(--text-secondary); text-decoration: line-through;">${a.FechaFinAnterior}</td>
+                    <td style="color: var(--text-primary); font-weight: 600;">${a.FechaFinActual}</td>
+                    <td><span style="font-size: 0.8rem; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">${a.CorteAnterior}</span></td>
+                    <td><span style="font-size: 0.8rem; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">${a.CorteActual}</span></td>
+                    <td style="font-weight: 700; color: ${badgeColor};">${a.Desviacion}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
